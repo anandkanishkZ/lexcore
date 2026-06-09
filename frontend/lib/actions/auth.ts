@@ -20,7 +20,7 @@ export async function handleRegisterUser(data: {
     firstName: string;
     lastName: string;
     email: string;
-    username: string;
+    userType: string;
     password: string;
 }) {
     try {

@@ -94,15 +94,22 @@ export default function RegisterForm() {
                     </div>
 
                     <div>
-                        <label className="block text-xs font-medium text-slate-700 mb-1">Username</label>
-                        <input
-                            type="text"
-                            {...register("username")}
-                            placeholder="anandsharma"
-                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
-                        />
-                        {errors.username && (
-                            <span className="mt-0.5 block text-xs text-red-500">{errors.username.message}</span>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">I am a</label>
+                        <select
+                            {...register("userType")}
+                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition bg-white"
+                        >
+                            <option value="">Select your role</option>
+                            <option value="client">Client</option>
+                            <option value="attorney">Attorney</option>
+                            <option value="lawyer">Lawyer</option>
+                            <option value="advocate">Advocate</option>
+                            <option value="paralegal">Paralegal</option>
+                            <option value="judge">Judge</option>
+                            <option value="legal consultant">Legal Consultant</option>
+                        </select>
+                        {errors.userType && (
+                            <span className="mt-0.5 block text-xs text-red-500">{errors.userType.message}</span>
                         )}
                     </div>
 

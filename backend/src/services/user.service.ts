@@ -15,11 +15,6 @@ export class UserService {
             throw new HttpException(400, "Email already exists");
         }
 
-        const existingUsername = await userRepository.getUserByUsername(userData.username);
-        if (existingUsername) {
-            throw new HttpException(400, "Username already exists");
-        }
-
         const hashedPassword = await bcryptjs.hash(userData.password, 10);
         userData.password = hashedPassword;
 
