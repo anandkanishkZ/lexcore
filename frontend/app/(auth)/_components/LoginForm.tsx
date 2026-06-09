@@ -39,18 +39,13 @@ export default function LoginForm() {
 
     return (
         <div className="w-full max-w-sm">
-            <div className="mb-8 text-center">
-                <div className="inline-flex items-center gap-2.5 mb-3">
-                    <div className="w-8 h-8 bg-brand rounded-lg flex items-center justify-center">
-                        <span className="text-white text-sm font-bold tracking-tighter">L</span>
-                    </div>
-                    <span className="text-xl font-semibold tracking-tight text-slate-900">Lexcore</span>
-                </div>
-                <p className="text-sm text-slate-500">Sign in to your account</p>
+            <div className="mb-4">
+                <h2 className="text-xl font-bold text-slate-900">Sign in to your account</h2>
+                <p className="mt-0.5 text-sm text-slate-500">Welcome back — enter your details below.</p>
             </div>
 
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                     {error && (
                         <p className="text-sm text-red-500 text-center border border-red-200 bg-red-50 rounded-lg px-3 py-2">
                             {error}
