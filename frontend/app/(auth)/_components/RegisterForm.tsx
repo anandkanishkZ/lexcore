@@ -1,0 +1,158 @@
+"use client";
+
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { RegisterFormData, registerSchema } from "@/app/(auth)/_components/schema";
+import { handleRegisterUser } from "@/lib/actions/auth";
+
+export default function RegisterForm() {
+    const [isPending, startTransition] = useTransition();
+    const [error, setError] = useState("");
+    const router = useRouter();
+
+    const {
+        register,
+        handleSubmit,
+        formState: { errors, isSubmitting },
+    } = useForm<RegisterFormData>({
+        resolver: zodResolver(registerSchema),
+    });
+
+    const onSubmit = (data: RegisterFormData) => {
+        setError("");
+        startTransition(async () => {
+            try {
+                const { confirmPassword, ...payload } = data;
+                const result = await handleRegisterUser(payload);
+                if (result.success) {
+                    router.push("/login");
+                } else {
+                    setError(result.message || "Registration failed");
+                }
+            } catch (err: any) {
+                setError(err?.message || "Registration failed");
+            }
+        });
+    };
+
+    return (
+        <div className="w-full max-w-sm">
+            <div className="mb-8 text-center">
+                <div className="inline-flex items-center gap-2.5 mb-3">
+                    <div className="w-8 h-8 bg-brand rounded-lg flex items-center justify-center">
+                        <span className="text-white text-sm font-bold tracking-tighter">L</span>
+                    </div>
+                    <span className="text-xl font-semibold tracking-tight text-slate-900">Lexcore</span>
+                </div>
+                <p className="text-sm text-slate-500">Create your account</p>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+                    {error && (
+                        <p className="text-sm text-red-500 text-center border border-red-200 bg-red-50 rounded-lg px-3 py-2">
+                            {error}
+                        </p>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5">First name</label>
+                            <input
+                                type="text"
+                                {...register("firstName")}
+                                placeholder="Anand"
+                                className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                            />
+                            {errors.firstName && (
+                                <span className="mt-1 block text-xs text-red-500">{errors.firstName.message}</span>
+                            )}
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Last name</label>
+                            <input
+                                type="text"
+                                {...register("lastName")}
+                                placeholder="Sharma"
+                                className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                            />
+                            {errors.lastName && (
+                                <span className="mt-1 block text-xs text-red-500">{errors.lastName.message}</span>
+                            )}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+                        <input
+                            type="email"
+                            {...register("email")}
+                            placeholder="anand@lexcore.com"
+                            className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                        />
+                        {errors.email && (
+                            <span className="mt-1 block text-xs text-red-500">{errors.email.message}</span>
+                        )}
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Username</label>
+                        <input
+                            type="text"
+                            {...register("username")}
+                            placeholder="anandsharma"
+                            className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                        />
+                        {errors.username && (
+                            <span className="mt-1 block text-xs text-red-500">{errors.username.message}</span>
+                        )}
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+                        <input
+                            type="password"
+                            {...register("password")}
+                            placeholder="••••••••"
+                            className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                        />
+                        {errors.password && (
+                            <span className="mt-1 block text-xs text-red-500">{errors.password.message}</span>
+                        )}
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Confirm password</label>
+                        <input
+                            type="password"
+                            {...register("confirmPassword")}
+                            placeholder="••••••••"
+                            className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                        />
+                        {errors.confirmPassword && (
+                            <span className="mt-1 block text-xs text-red-500">{errors.confirmPassword.message}</span>
+                        )}
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={isSubmitting || isPending}
+                        className="w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-white hover:bg-[#1a2540] active:scale-[0.98] transition disabled:opacity-60"
+                    >
+                        {isPending ? "Creating account..." : "Create account"}
+                    </button>
+
+                    <p className="text-center text-sm text-slate-500">
+                        Already have an account?{" "}
+                        <Link href="/login" className="text-slate-800 font-medium hover:underline">
+                            Sign in
+                        </Link>
+                    </p>
+                </form>
+            </div>
+        </div>
+    );
+}
