@@ -20,3 +20,30 @@ const UserMongoSchema: Schema = new Schema<IUser>(
 );
 
 export const UserModel = mongoose.model<IUser>("User", UserMongoSchema);
+
+/**
+ * The user shape that is safe to send to clients — everything except the
+ * password hash. Build it only through `toPublicUser` so the hash can never
+ * leak out of an API response by accident.
+ */
+export interface PublicUser {
+    _id: mongoose.Types.ObjectId;
+    firstName: string;
+    lastName: string;
+    email: string;
+    userType: string;
+    role: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export const toPublicUser = (user: IUser): PublicUser => ({
+    _id: user._id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    userType: user.userType,
+    role: user.role,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+});
