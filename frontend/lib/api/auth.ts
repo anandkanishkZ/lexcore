@@ -4,7 +4,7 @@ export async function registerApi(data: {
     firstName: string;
     lastName: string;
     email: string;
-    username: string;
+    userType: string;
     password: string;
 }) {
     const res = await fetch(`${API_URL}/api/v1/auth/register`, {
