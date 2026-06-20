@@ -45,6 +45,30 @@ export class UserService {
         return { user: toPublicUser(user), token };
     }
 
+    async updateUser(userId: string, updateData: any): Promise<PublicUser> {
+        const user = await userRepository.getUserById(userId);
+        if (!user) {
+            throw new HttpException(404, "User not found");
+        }
+
+        if (updateData.email && updateData.email !== user.email) {
+            const existing = await userRepository.getUserByEmail(updateData.email);
+            if (existing) {
+                throw new HttpException(400, "Email already in use");
+            }
+        }
+
+        if (updateData.password) {
+            updateData.password = await bcryptjs.hash(updateData.password, 10);
+        }
+
+        const updated = await userRepository.update(userId, updateData);
+        if (!updated) {
+            throw new HttpException(500, "Failed to update user");
+        }
+        return toPublicUser(updated);
+    }
+
     async updateProfileImage(userId: string, imagePath: string): Promise<PublicUser> {
         const updated = await userRepository.update(userId, { profileImage: imagePath });
         if (!updated) {

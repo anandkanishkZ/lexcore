@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { z } from "zod";
-import { CreateUserDTO, LoginUserDTO } from "../dtos/user.dto";
+import { CreateUserDTO, LoginUserDTO, UpdateUserDTO } from "../dtos/user.dto";
 import { UserService } from "../services/user.service";
 import { toPublicUser, IUser } from "../models/user.model";
 import { ApiResponseHelper } from "../utils/apihelper.util";
@@ -48,11 +48,35 @@ export class UserController {
         }
     }
 
-    /**
-     * Uploads/replaces the authenticated user's profile picture. Protected and
-     * runs after multer's upload.single("image"), so req.file holds the saved
-     * file. Stores the public path on the user and returns the updated profile.
-     */
+    async whoami(req: Request, res: Response) {
+        try {
+            const user = req.user as IUser;
+            return ApiResponseHelper.success(res, toPublicUser(user), "User detail", 200);
+        } catch (error: any) {
+            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+        }
+    }
+
+    async updateUser(req: Request, res: Response) {
+        try {
+            const parsed = UpdateUserDTO.safeParse(req.body);
+            if (!parsed.success) {
+                return ApiResponseHelper.error(res, parsed.error.errors.map(e => e.message).join(", "), 400);
+            }
+            const userId = (req.user as IUser)._id.toString();
+            const updateData: any = { ...parsed.data };
+
+            if (req.file) {
+                updateData.profileImage = `/uploads/${req.file.filename}`;
+            }
+
+            const user = await userService.updateUser(userId, updateData);
+            return ApiResponseHelper.success(res, user, "Profile updated successfully", 200);
+        } catch (error: any) {
+            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+        }
+    }
+
     async uploadProfileImage(req: Request, res: Response) {
         try {
             if (!req.file) {
