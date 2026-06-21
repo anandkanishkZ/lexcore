@@ -23,3 +23,35 @@ export async function loginApi(data: { email: string; password: string }) {
     });
     return res.json();
 }
+
+export async function whoamiApi(token: string) {
+    const res = await fetch(`${API_URL}/api/v1/auth/whoami`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.json();
+}
+
+export async function updateProfileApi(token: string, formData: FormData) {
+    const res = await fetch(`${API_URL}/api/v1/auth/update`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+    });
+    return res.json();
+}
+
+export async function updatePasswordApi(
+    token: string,
+    data: { password: string }
+) {
+    const res = await fetch(`${API_URL}/api/v1/auth/update`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+    });
+    return res.json();
+}
