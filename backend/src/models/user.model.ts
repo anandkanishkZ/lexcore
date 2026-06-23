@@ -3,6 +3,7 @@ import { UserType } from "../types/user.type";
 
 export interface IUser extends UserType, Document {
     _id: mongoose.Types.ObjectId;
+    profileImage?: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -15,6 +16,8 @@ const UserMongoSchema: Schema = new Schema<IUser>(
         userType: { type: String, required: true, enum: ["client", "attorney", "lawyer", "advocate", "paralegal", "judge", "legal consultant"] },
         password: { type: String, required: true },
         role: { type: String, enum: ["admin", "user"], default: "user" },
+        // Relative path to the uploaded avatar, e.g. "/uploads/profile-<id>.jpg".
+        profileImage: { type: String, default: "" },
     },
     { timestamps: true }
 );
@@ -33,6 +36,7 @@ export interface PublicUser {
     email: string;
     userType: string;
     role: string;
+    profileImage: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -44,6 +48,7 @@ export const toPublicUser = (user: IUser): PublicUser => ({
     email: user.email,
     userType: user.userType,
     role: user.role,
+    profileImage: user.profileImage ?? "",
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
 });

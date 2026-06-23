@@ -44,4 +44,12 @@ export class UserService {
 
         return { user: toPublicUser(user), token };
     }
+
+    async updateProfileImage(userId: string, imagePath: string): Promise<PublicUser> {
+        const updated = await userRepository.update(userId, { profileImage: imagePath });
+        if (!updated) {
+            throw new HttpException(404, "User not found");
+        }
+        return toPublicUser(updated);
+    }
 }
