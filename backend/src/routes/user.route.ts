@@ -10,6 +10,7 @@ userRouter.post("/register", userController.createUser);
 userRouter.post("/login", userController.loginUser);
 
 // Protected — require a valid Bearer token.
+userRouter.get("/users", authorizedMiddleware, userController.getAll);
 userRouter.get("/me", authorizedMiddleware, userController.getMe);
 userRouter.get("/whoami", authorizedMiddleware, userController.whoami);
 userRouter.put("/update", authorizedMiddleware, upload.single("profileImage"), userController.updateUser);

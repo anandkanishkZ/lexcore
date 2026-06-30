@@ -1,4 +1,4 @@
-import { UserMongoRepository } from "../repositories/user.repository";
+import { UserMongoRepository, UserQuery } from "../repositories/user.repository";
 import { CreateUserDTO, LoginUserDTO } from "../dtos/user.dto";
 import { PublicUser, toPublicUser } from "../models/user.model";
 import { HttpException } from "../exceptions/http-exception";
@@ -9,6 +9,11 @@ import { SECRET_KEY } from "../configs/constant";
 const userRepository = new UserMongoRepository();
 
 export class UserService {
+    async getAll(query: UserQuery): Promise<{ data: PublicUser[]; total: number }> {
+        const { data, total } = await userRepository.getAll(query);
+        return { data: data.map(toPublicUser), total };
+    }
+
     async createUser(userData: CreateUserDTO): Promise<PublicUser> {
         const existingEmail = await userRepository.getUserByEmail(userData.email);
         if (existingEmail) {
