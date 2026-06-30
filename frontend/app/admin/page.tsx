@@ -1,15 +1,5 @@
 import Link from "next/link";
-import {
-    Users,
-    UserCheck,
-    UserX,
-    UserPlus,
-    Briefcase,
-    FolderOpen,
-    CalendarDays,
-    Receipt,
-    ArrowRight,
-} from "lucide-react";
+import { Users, UserCheck, UserX, UserPlus, ArrowRight } from "lucide-react";
 import { handleUserDetails } from "@/lib/actions/auth";
 import { fetchClientsAction } from "@/lib/actions/client";
 import StatCard from "./_components/StatCard";
@@ -22,13 +12,6 @@ interface DashboardClient {
     status: string;
     createdAt: string;
 }
-
-const roadmapModules = [
-    { label: "Case & Matter Management", icon: Briefcase, sprint: "Sprint 6" },
-    { label: "Document Management (DMS)", icon: FolderOpen, sprint: "Sprint 7" },
-    { label: "Calendar & Court Diary", icon: CalendarDays, sprint: "Sprint 9" },
-    { label: "Billing & Invoicing", icon: Receipt, sprint: "Sprint 9" },
-];
 
 export default async function AdminDashboardPage() {
     const [userResult, clientsResult] = await Promise.all([
@@ -128,37 +111,15 @@ export default async function AdminDashboardPage() {
                     )}
                 </div>
 
-                <div className="space-y-6">
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-                        <h3 className="text-sm font-semibold text-slate-900 mb-3">Quick Actions</h3>
-                        <Link
-                            href="/admin/clients/create"
-                            className="flex items-center justify-center gap-2 rounded-lg bg-brand-gold px-4 py-2.5 text-sm font-medium text-white hover:bg-[#a3853a] transition"
-                        >
-                            <UserPlus className="w-4 h-4" />
-                            Add Client
-                        </Link>
-                    </div>
-
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-                        <h3 className="text-sm font-semibold text-slate-900 mb-1">Platform Roadmap</h3>
-                        <p className="text-xs text-slate-500 mb-4">Modules planned for upcoming sprints.</p>
-                        <ul className="space-y-3">
-                            {roadmapModules.map((mod) => (
-                                <li key={mod.label} className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
-                                        <mod.icon className="w-4 h-4 text-slate-500" strokeWidth={1.75} />
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-sm text-slate-700 truncate">{mod.label}</p>
-                                    </div>
-                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 shrink-0">
-                                        {mod.sprint}
-                                    </span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 h-fit">
+                    <h3 className="text-sm font-semibold text-slate-900 mb-3">Quick Actions</h3>
+                    <Link
+                        href="/admin/clients/create"
+                        className="flex items-center justify-center gap-2 rounded-lg bg-brand-gold px-4 py-2.5 text-sm font-medium text-white hover:bg-[#a3853a] transition"
+                    >
+                        <UserPlus className="w-4 h-4" />
+                        Add Client
+                    </Link>
                 </div>
             </div>
         </div>
