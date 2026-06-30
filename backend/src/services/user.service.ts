@@ -1,5 +1,5 @@
 import { UserMongoRepository, UserQuery } from "../repositories/user.repository";
-import { CreateUserDTO, LoginUserDTO } from "../dtos/user.dto";
+import { CreateUserDTO, LoginUserDTO, AdminCreateUserDTO, AdminUpdateUserDTO } from "../dtos/user.dto";
 import { PublicUser, toPublicUser } from "../models/user.model";
 import { HttpException } from "../exceptions/http-exception";
 import bcryptjs from "bcryptjs";
@@ -12,6 +12,40 @@ export class UserService {
     async getAll(query: UserQuery): Promise<{ data: PublicUser[]; total: number }> {
         const { data, total } = await userRepository.getAll(query);
         return { data: data.map(toPublicUser), total };
+    }
+
+    async getById(id: string): Promise<PublicUser> {
+        const user = await userRepository.getUserById(id);
+        if (!user) {
+            throw new HttpException(404, "User not found");
+        }
+        return toPublicUser(user);
+    }
+
+    async adminCreateUser(userData: AdminCreateUserDTO): Promise<PublicUser> {
+        const existingEmail = await userRepository.getUserByEmail(userData.email);
+        if (existingEmail) {
+            throw new HttpException(400, "Email already exists");
+        }
+
+        const hashedPassword = await bcryptjs.hash(userData.password, 10);
+        const created = await userRepository.createUser({
+            ...userData,
+            password: hashedPassword,
+        });
+        return toPublicUser(created);
+    }
+
+    async adminUpdateUser(id: string, updateData: AdminUpdateUserDTO): Promise<PublicUser> {
+        return this.updateUser(id, updateData);
+    }
+
+    async deleteUser(id: string): Promise<void> {
+        const user = await userRepository.getUserById(id);
+        if (!user) {
+            throw new HttpException(404, "User not found");
+        }
+        await userRepository.delete(id);
     }
 
     async createUser(userData: CreateUserDTO): Promise<PublicUser> {
@@ -50,7 +84,7 @@ export class UserService {
         return { user: toPublicUser(user), token };
     }
 
-    async updateUser(userId: string, updateData: any): Promise<PublicUser> {
+    async updateUser(userId: string, updateData: AdminUpdateUserDTO & { profileImage?: string }): Promise<PublicUser> {
         const user = await userRepository.getUserById(userId);
         if (!user) {
             throw new HttpException(404, "User not found");

@@ -4,6 +4,7 @@ export interface PaginationMeta {
     page: number;
     limit: number;
     total: number;
+    totalPages?: number;
 }
 
 export interface ApiResponse<T> {
@@ -22,7 +23,10 @@ export class ApiResponseHelper {
         status: number = 200,
         meta?: PaginationMeta
     ): Response {
-        const response: ApiResponse<T> = { status, success: true, message, data, meta };
+        const fullMeta = meta
+            ? { ...meta, totalPages: meta.totalPages ?? Math.ceil(meta.total / meta.limit) }
+            : meta;
+        const response: ApiResponse<T> = { status, success: true, message, data, meta: fullMeta };
         return res.status(status).json(response);
     }
 
