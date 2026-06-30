@@ -11,7 +11,7 @@ export default async function ClientDetailPage({ params }: PageProps) {
     const result = await fetchClientAction(id);
 
     if (!result.success) {
-        redirect("/admin/clients");
+        redirect("/admin/users");
     }
 
     const client = result.data;
@@ -30,12 +30,12 @@ export default async function ClientDetailPage({ params }: PageProps) {
                 <div className="flex gap-2">
                     <Link
                         href={`/admin/clients/${id}/edit`}
-                        className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-[#1a2540] transition"
+                        className="rounded-lg bg-brand-gold px-4 py-2 text-sm font-medium text-white hover:bg-[#a3853a] transition"
                     >
                         Edit
                     </Link>
                     <Link
-                        href="/admin/clients"
+                        href="/admin/users"
                         className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition"
                     >
                         Back

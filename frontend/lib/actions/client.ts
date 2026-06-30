@@ -48,7 +48,7 @@ export async function createClientAction(data: {
         if (!token) return { success: false, message: "Not authenticated" };
         const result = await createClientApi(token, data);
         if (result.success) {
-            revalidatePath("/admin/clients");
+            revalidatePath("/admin/users");
         }
         return result;
     } catch (error: any) {
@@ -74,7 +74,7 @@ export async function updateClientAction(
         if (!token) return { success: false, message: "Not authenticated" };
         const result = await updateClientApi(token, id, data);
         if (result.success) {
-            revalidatePath("/admin/clients");
+            revalidatePath("/admin/users");
         }
         return result;
     } catch (error: any) {
@@ -88,7 +88,7 @@ export async function deleteClientAction(id: string) {
         if (!token) return { success: false, message: "Not authenticated" };
         const result = await deleteClientApi(token, id);
         if (result.success) {
-            revalidatePath("/admin/clients");
+            revalidatePath("/admin/users");
         }
         return result;
     } catch (error: any) {

@@ -50,7 +50,7 @@ export default function ClientForm({
                         : await updateClientAction(clientId!, data);
 
                 if (result.success) {
-                    router.push("/admin/clients");
+                    router.push("/admin/users");
                 } else {
                     setError(result.message || `Failed to ${mode} client`);
                 }
@@ -74,7 +74,7 @@ export default function ClientForm({
                 </label>
                 <select
                     {...register("type")}
-                    className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition bg-white"
+                    className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition bg-white"
                 >
                     <option value="individual">Individual</option>
                     <option value="company">Company</option>
@@ -95,7 +95,7 @@ export default function ClientForm({
                         type="text"
                         {...register("companyName")}
                         placeholder="Company name"
-                        className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                        className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition"
                     />
                 </div>
             )}
@@ -109,7 +109,7 @@ export default function ClientForm({
                         type="text"
                         {...register("firstName")}
                         placeholder="First name"
-                        className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                        className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition"
                     />
                     {errors.firstName && (
                         <span className="mt-1 block text-xs text-red-500">
@@ -125,7 +125,7 @@ export default function ClientForm({
                         type="text"
                         {...register("lastName")}
                         placeholder="Last name"
-                        className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                        className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition"
                     />
                     {errors.lastName && (
                         <span className="mt-1 block text-xs text-red-500">
@@ -143,7 +143,7 @@ export default function ClientForm({
                     type="email"
                     {...register("email")}
                     placeholder="client@example.com"
-                    className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                    className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition"
                 />
                 {errors.email && (
                     <span className="mt-1 block text-xs text-red-500">
@@ -160,7 +160,7 @@ export default function ClientForm({
                     type="text"
                     {...register("phone")}
                     placeholder="+977-9800000000"
-                    className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                    className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition"
                 />
                 {errors.phone && (
                     <span className="mt-1 block text-xs text-red-500">
@@ -177,7 +177,7 @@ export default function ClientForm({
                     {...register("address")}
                     placeholder="Client address"
                     rows={3}
-                    className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition resize-none"
+                    className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition resize-none"
                 />
             </div>
 
@@ -185,7 +185,7 @@ export default function ClientForm({
                 <button
                     type="submit"
                     disabled={isPending}
-                    className="rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-white hover:bg-[#1a2540] active:scale-[0.98] transition disabled:opacity-60"
+                    className="rounded-lg bg-brand-gold px-5 py-2.5 text-sm font-medium text-white hover:bg-[#a3853a] active:scale-[0.98] transition disabled:opacity-60"
                 >
                     {isPending
                         ? mode === "create"
@@ -197,7 +197,7 @@ export default function ClientForm({
                 </button>
                 <button
                     type="button"
-                    onClick={() => router.push("/admin/clients")}
+                    onClick={() => router.push("/admin/users")}
                     className="rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition"
                 >
                     Cancel

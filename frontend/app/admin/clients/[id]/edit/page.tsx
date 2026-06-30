@@ -11,7 +11,7 @@ export default async function EditClientPage({ params }: PageProps) {
     const result = await fetchClientAction(id);
 
     if (!result.success) {
-        redirect("/admin/clients");
+        redirect("/admin/users");
     }
 
     const client = result.data;
