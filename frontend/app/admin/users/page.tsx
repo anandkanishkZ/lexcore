@@ -1,75 +1,36 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { UserPlus } from "lucide-react";
-import { fetchClientsAction } from "@/lib/actions/client";
-import { fetchUsersAction } from "@/lib/actions/user";
-import UsersTable, { type Member } from "./_components/UsersTable";
+import { fetchMembersAction } from "@/lib/actions/member";
+import UsersTable from "./_components/UsersTable";
+import SearchBar from "./_components/SearchBar";
+import Pagination from "./_components/Pagination";
 
-const MAX_FETCH = 200;
-
-interface ApiUser {
-    _id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    role: string;
-    userType: string;
-    createdAt: string;
+interface PageProps {
+    searchParams: Promise<{ page?: string; size?: string; search?: string }>;
 }
 
-interface ApiClient {
-    _id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    type: string;
-    status: string;
-    createdAt: string;
-}
+export default async function UsersPage({ searchParams }: PageProps) {
+    const params = await searchParams;
+    const page = parseInt(params.page || "1");
+    const size = parseInt(params.size || "10");
+    const search = params.search || undefined;
 
-export default async function UsersPage() {
-    const [clientsResult, usersResult] = await Promise.all([
-        fetchClientsAction(1, MAX_FETCH),
-        fetchUsersAction(1, MAX_FETCH),
-    ]);
+    const result = await fetchMembersAction(page, size, search);
 
-    const members: Member[] = [
-        ...(usersResult.success ? usersResult.data || [] : []).map(
-            (u: ApiUser): Member => ({
-                id: u._id,
-                firstName: u.firstName,
-                lastName: u.lastName,
-                email: u.email,
-                phone: undefined,
-                category: "staff",
-                subtype: u.role === "admin" ? "admin" : u.userType,
-                status: undefined,
-                createdAt: u.createdAt,
-                detailHref: undefined,
-            })
-        ),
-        ...(clientsResult.success ? clientsResult.data || [] : []).map(
-            (c: ApiClient): Member => ({
-                id: c._id,
-                firstName: c.firstName,
-                lastName: c.lastName,
-                email: c.email,
-                phone: c.phone,
-                category: "client",
-                subtype: c.type,
-                status: c.status,
-                createdAt: c.createdAt,
-                detailHref: `/admin/clients/${c._id}`,
-            })
-        ),
-    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    if (!result.success) {
+        redirect("/login");
+    }
 
     return (
         <div>
             <div className="flex items-center justify-between mb-6">
                 <p className="text-sm text-slate-500">
                     Everyone registered in Lexcore &mdash; staff accounts and client
-                    records &middot; {members.length} total
+                    records
+                    {result.meta?.total !== undefined && (
+                        <span className="text-slate-400"> &middot; {result.meta.total} total</span>
+                    )}
                 </p>
                 <Link
                     href="/admin/clients/create"
@@ -80,7 +41,18 @@ export default async function UsersPage() {
                 </Link>
             </div>
 
-            <UsersTable members={members} />
+            <div className="mb-4">
+                <SearchBar defaultValue={search} size={size} />
+            </div>
+
+            <UsersTable members={result.data || []} />
+
+            <Pagination
+                page={result.meta?.page ?? page}
+                size={result.meta?.limit ?? size}
+                total={result.meta?.total ?? 0}
+                search={search}
+            />
         </div>
     );
 }

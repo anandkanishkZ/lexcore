@@ -4,6 +4,7 @@ import morgan from "morgan";
 import multer from "multer";
 import userRouter from "./routes/user.route";
 import clientRouter from "./routes/client.route";
+import memberRouter from "./routes/member.route";
 import { HttpException } from "./exceptions/http-exception";
 import { ApiResponseHelper } from "./utils/apihelper.util";
 import { UPLOAD_DIR } from "./middlewares/upload.middleware";
@@ -21,6 +22,7 @@ app.use("/uploads", express.static(UPLOAD_DIR));
 
 app.use("/api/v1/auth", userRouter);
 app.use("/api/v1/clients", clientRouter);
+app.use("/api/v1/members", memberRouter);
 
 app.use((req: Request, res: Response) => {
     ApiResponseHelper.error(res, "API not found", 404);

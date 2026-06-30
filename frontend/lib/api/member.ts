@@ -1,6 +1,6 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8089";
 
-export async function fetchUsersApi(
+export async function fetchMembersApi(
     token: string,
     page: number = 1,
     size: number = 10,
@@ -12,7 +12,7 @@ export async function fetchUsersApi(
     });
     if (search) params.set("search", search);
 
-    const res = await fetch(`${API_URL}/api/v1/auth/users?${params}`, {
+    const res = await fetch(`${API_URL}/api/v1/members?${params}`, {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
     });

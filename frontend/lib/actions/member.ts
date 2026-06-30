@@ -1,9 +1,9 @@
 "use server";
 
-import { fetchUsersApi } from "../api/user";
+import { fetchMembersApi } from "../api/member";
 import { getTokenCookie } from "../cookies";
 
-export async function fetchUsersAction(
+export async function fetchMembersAction(
     page: number = 1,
     size: number = 10,
     search?: string
@@ -11,7 +11,7 @@ export async function fetchUsersAction(
     try {
         const token = await getTokenCookie();
         if (!token) return { success: false, message: "Not authenticated" };
-        return await fetchUsersApi(token, page, size, search);
+        return await fetchMembersApi(token, page, size, search);
     } catch (error) {
         const message = error instanceof Error ? error.message : "Failed to fetch users";
         return { success: false, message };
