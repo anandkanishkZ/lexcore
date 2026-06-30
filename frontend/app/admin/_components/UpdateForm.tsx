@@ -6,7 +6,7 @@ import { useState, useTransition, useRef } from "react";
 import {
     updateProfileSchema,
     UpdateProfileFormData,
-} from "@/app/dashboard/_components/schema";
+} from "@/app/admin/_components/profileSchema";
 import { handleUpdateProfile } from "@/lib/actions/auth";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import Image from "next/image";
@@ -140,7 +140,7 @@ export default function UpdateForm({ user }: UpdateFormProps) {
                     <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="text-sm font-medium text-brand hover:underline"
+                        className="text-sm font-medium text-brand-gold hover:underline"
                     >
                         Change photo
                     </button>
@@ -167,7 +167,7 @@ export default function UpdateForm({ user }: UpdateFormProps) {
                     <input
                         type="text"
                         {...register("firstName")}
-                        className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                        className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition"
                     />
                     {errors.firstName && (
                         <span className="mt-1 block text-xs text-red-500">
@@ -182,7 +182,7 @@ export default function UpdateForm({ user }: UpdateFormProps) {
                     <input
                         type="text"
                         {...register("lastName")}
-                        className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                        className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition"
                     />
                     {errors.lastName && (
                         <span className="mt-1 block text-xs text-red-500">
@@ -199,7 +199,7 @@ export default function UpdateForm({ user }: UpdateFormProps) {
                 <input
                     type="email"
                     {...register("email")}
-                    className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                    className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition"
                 />
                 {errors.email && (
                     <span className="mt-1 block text-xs text-red-500">
@@ -223,7 +223,7 @@ export default function UpdateForm({ user }: UpdateFormProps) {
             <button
                 type="submit"
                 disabled={isPending}
-                className="w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-white hover:bg-[#1a2540] active:scale-[0.98] transition disabled:opacity-60"
+                className="w-full rounded-lg bg-brand-gold px-4 py-2.5 text-sm font-medium text-white hover:bg-[#a3853a] active:scale-[0.98] transition disabled:opacity-60"
             >
                 {isPending ? "Updating..." : "Update Profile"}
             </button>

@@ -27,8 +27,8 @@ export default async function ProfilePage() {
 
             <div className="mt-4">
                 <Link
-                    href="/dashboard/password"
-                    className="text-sm font-medium text-brand hover:underline"
+                    href="/admin/profile/password"
+                    className="text-sm font-medium text-brand-gold hover:underline"
                 >
                     Change password
                 </Link>

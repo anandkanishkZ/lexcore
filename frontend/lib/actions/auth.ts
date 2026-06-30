@@ -75,7 +75,7 @@ export async function handleUpdateProfile(formData: FormData) {
         const result = await updateProfileApi(token, formData);
         if (result.success) {
             await storeUserData(result.data);
-            revalidatePath("/dashboard");
+            revalidatePath("/admin");
         }
         return result;
     } catch (error: any) {

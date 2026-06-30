@@ -1,4 +1,4 @@
-import PasswordResetForm from "../_components/PasswordResetForm";
+import PasswordResetForm from "@/app/admin/_components/PasswordResetForm";
 import Link from "next/link";
 
 export default function PasswordPage() {
@@ -19,8 +19,8 @@ export default function PasswordPage() {
 
             <div className="mt-4">
                 <Link
-                    href="/dashboard/profile"
-                    className="text-sm font-medium text-brand hover:underline"
+                    href="/admin/profile"
+                    className="text-sm font-medium text-brand-gold hover:underline"
                 >
                     Back to profile
                 </Link>

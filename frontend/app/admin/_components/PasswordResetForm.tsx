@@ -6,7 +6,7 @@ import { useState, useTransition } from "react";
 import {
     updatePasswordSchema,
     UpdatePasswordFormData,
-} from "@/app/dashboard/_components/schema";
+} from "@/app/admin/_components/profileSchema";
 import { handleUpdatePassword } from "@/lib/actions/auth";
 
 export default function PasswordResetForm() {
@@ -65,7 +65,7 @@ export default function PasswordResetForm() {
                     type="password"
                     {...register("currentPassword")}
                     placeholder="Enter current password"
-                    className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                    className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition"
                 />
                 {errors.currentPassword && (
                     <span className="mt-1 block text-xs text-red-500">
@@ -82,7 +82,7 @@ export default function PasswordResetForm() {
                     type="password"
                     {...register("newPassword")}
                     placeholder="Enter new password"
-                    className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                    className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition"
                 />
                 {errors.newPassword && (
                     <span className="mt-1 block text-xs text-red-500">
@@ -99,7 +99,7 @@ export default function PasswordResetForm() {
                     type="password"
                     {...register("confirmPassword")}
                     placeholder="Confirm new password"
-                    className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                    className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition"
                 />
                 {errors.confirmPassword && (
                     <span className="mt-1 block text-xs text-red-500">
@@ -111,7 +111,7 @@ export default function PasswordResetForm() {
             <button
                 type="submit"
                 disabled={isPending}
-                className="w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-white hover:bg-[#1a2540] active:scale-[0.98] transition disabled:opacity-60"
+                className="w-full rounded-lg bg-brand-gold px-4 py-2.5 text-sm font-medium text-white hover:bg-[#a3853a] active:scale-[0.98] transition disabled:opacity-60"
             >
                 {isPending ? "Updating..." : "Change Password"}
             </button>
