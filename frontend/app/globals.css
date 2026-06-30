@@ -8,7 +8,12 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-brand: #0f1629;
+  /* Brand palette — kept in sync with the mobile app's AppColors
+     (lexcore/app/lib/core/theme/app_colors.dart): navy is the structural
+     color (headers, sidebar, icons), gold is the accent (CTAs, links,
+     active/focus states). */
+  --color-brand: #0f213d;
+  --color-brand-gold: #b8983f;
   --font-sans: var(--font-geist-sans);
 }
 

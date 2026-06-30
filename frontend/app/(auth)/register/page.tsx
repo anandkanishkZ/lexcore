@@ -4,7 +4,7 @@ export default function RegisterPage() {
     return (
         <div className="h-screen overflow-hidden grid lg:grid-cols-2">
             {/* Left — info panel */}
-            <div className="hidden lg:flex flex-col justify-between bg-[#1a2540] h-full px-10 py-8 text-white">
+            <div className="hidden lg:flex flex-col justify-between bg-brand h-full px-10 py-8 text-white">
                 {/* Logo */}
                 <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center border border-white/20">

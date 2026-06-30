@@ -60,7 +60,7 @@ export default function LoginForm() {
                             type="email"
                             {...register("email")}
                             placeholder="you@example.com"
-                            className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                            className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition"
                         />
                         {errors.email && (
                             <span className="mt-1 block text-xs text-red-500">{errors.email.message}</span>
@@ -75,7 +75,7 @@ export default function LoginForm() {
                             type="password"
                             {...register("password")}
                             placeholder="••••••••"
-                            className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                            className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition"
                         />
                         {errors.password && (
                             <span className="mt-1 block text-xs text-red-500">{errors.password.message}</span>
@@ -85,14 +85,14 @@ export default function LoginForm() {
                     <button
                         type="submit"
                         disabled={isSubmitting || isPending}
-                        className="w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-white hover:bg-[#1a2540] active:scale-[0.98] transition disabled:opacity-60"
+                        className="w-full rounded-lg bg-brand-gold px-4 py-2.5 text-sm font-medium text-white hover:bg-[#a3853a] active:scale-[0.98] transition disabled:opacity-60"
                     >
                         {isPending ? "Signing in..." : "Sign in"}
                     </button>
 
                     <p className="text-center text-sm text-slate-500">
                         Don&apos;t have an account?{" "}
-                        <Link href="/register" className="text-slate-800 font-medium hover:underline">
+                        <Link href="/register" className="text-brand-gold font-medium hover:underline">
                             Sign up
                         </Link>
                     </p>

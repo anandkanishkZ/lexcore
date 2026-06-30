@@ -60,7 +60,7 @@ export default function RegisterForm() {
                                 type="text"
                                 {...register("firstName")}
                                 placeholder="Anand"
-                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition"
                             />
                             {errors.firstName && (
                                 <span className="mt-0.5 block text-xs text-red-500">{errors.firstName.message}</span>
@@ -72,7 +72,7 @@ export default function RegisterForm() {
                                 type="text"
                                 {...register("lastName")}
                                 placeholder="Sharma"
-                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition"
                             />
                             {errors.lastName && (
                                 <span className="mt-0.5 block text-xs text-red-500">{errors.lastName.message}</span>
@@ -86,7 +86,7 @@ export default function RegisterForm() {
                             type="email"
                             {...register("email")}
                             placeholder="anand@lexcore.com"
-                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition"
                         />
                         {errors.email && (
                             <span className="mt-0.5 block text-xs text-red-500">{errors.email.message}</span>
@@ -97,7 +97,7 @@ export default function RegisterForm() {
                         <label className="block text-xs font-medium text-slate-700 mb-1">I am a</label>
                         <select
                             {...register("userType")}
-                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition bg-white"
+                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition bg-white"
                         >
                             <option value="">Select your role</option>
                             <option value="client">Client</option>
@@ -120,7 +120,7 @@ export default function RegisterForm() {
                                 type="password"
                                 {...register("password")}
                                 placeholder="••••••••"
-                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition"
                             />
                             {errors.password && (
                                 <span className="mt-0.5 block text-xs text-red-500">{errors.password.message}</span>
@@ -132,7 +132,7 @@ export default function RegisterForm() {
                                 type="password"
                                 {...register("confirmPassword")}
                                 placeholder="••••••••"
-                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition"
                             />
                             {errors.confirmPassword && (
                                 <span className="mt-0.5 block text-xs text-red-500">{errors.confirmPassword.message}</span>
@@ -143,14 +143,14 @@ export default function RegisterForm() {
                     <button
                         type="submit"
                         disabled={isSubmitting || isPending}
-                        className="w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-white hover:bg-[#1a2540] active:scale-[0.98] transition disabled:opacity-60"
+                        className="w-full rounded-lg bg-brand-gold px-4 py-2.5 text-sm font-medium text-white hover:bg-[#a3853a] active:scale-[0.98] transition disabled:opacity-60"
                     >
                         {isPending ? "Creating account..." : "Create account"}
                     </button>
 
                     <p className="text-center text-xs text-slate-500">
                         Already have an account?{" "}
-                        <Link href="/login" className="text-slate-800 font-medium hover:underline">
+                        <Link href="/login" className="text-brand-gold font-medium hover:underline">
                             Sign in
                         </Link>
                     </p>
