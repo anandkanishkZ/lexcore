@@ -57,4 +57,8 @@ export class CaseService {
         if (!existing) throw new HttpException(404, "Case not found");
         return caseRepository.delete(id);
     }
+
+    async getMine(email: string): Promise<ICase[]> {
+        return caseRepository.getMineByEmail(email);
+    }
 }

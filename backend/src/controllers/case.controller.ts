@@ -71,4 +71,14 @@ export class CaseController {
             return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
         }
     }
+
+    async getMine(req: Request, res: Response) {
+        try {
+            const email = (req.user as IUser).email;
+            const data = await caseService.getMine(email);
+            return ApiResponseHelper.success(res, data, "My cases fetched successfully", 200);
+        } catch (error: any) {
+            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+        }
+    }
 }

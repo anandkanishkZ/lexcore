@@ -1,4 +1,5 @@
 import { CaseModel, ICase } from "../models/case.model";
+import { ClientModel } from "../models/client.model";
 
 export interface CaseQuery {
     page: number;
@@ -62,5 +63,15 @@ export class CaseMongoRepository {
     async delete(id: string): Promise<boolean> {
         const deleted = await CaseModel.findByIdAndDelete(id);
         return !!deleted;
+    }
+
+    async getMineByEmail(email: string): Promise<ICase[]> {
+        const client = await ClientModel.findOne({ email });
+        if (!client) return [];
+        return CaseModel.find({ client: client._id })
+            .populate("client", "firstName lastName email")
+            .populate("assignedAttorney", "firstName lastName email userType")
+            .populate("createdBy", "firstName lastName")
+            .sort({ createdAt: -1 });
     }
 }
