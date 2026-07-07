@@ -4,6 +4,7 @@ import morgan from "morgan";
 import multer from "multer";
 import userRouter from "./routes/user.route";
 import clientRouter from "./routes/client.route";
+import caseRouter from "./routes/case.route";
 import memberRouter from "./routes/member.route";
 import adminUserRouter from "./routes/admin-user.route";
 import { HttpException } from "./exceptions/http-exception";
@@ -23,6 +24,7 @@ app.use("/uploads", express.static(UPLOAD_DIR));
 
 app.use("/api/v1/auth", userRouter);
 app.use("/api/v1/clients", clientRouter);
+app.use("/api/v1/cases", caseRouter);
 app.use("/api/v1/members", memberRouter);
 app.use("/api/v1/admin/users", adminUserRouter);
 
