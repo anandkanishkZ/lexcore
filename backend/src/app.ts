@@ -22,6 +22,10 @@ app.use(morgan("combined"));
 // Serve uploaded files (e.g. profile pictures) at /uploads/<filename>.
 app.use("/uploads", express.static(UPLOAD_DIR));
 
+app.get("/api/v1/health", (req: Request, res: Response) =>
+    ApiResponseHelper.success(res, { uptime: process.uptime() }, "OK", 200)
+);
+
 app.use("/api/v1/auth", userRouter);
 app.use("/api/v1/clients", clientRouter);
 app.use("/api/v1/cases", caseRouter);
