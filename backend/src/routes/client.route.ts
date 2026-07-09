@@ -1,11 +1,13 @@
 import { Router } from "express";
 import { ClientController } from "../controllers/client.controller";
-import { authorizedMiddleware } from "../middlewares/authorized.middleware";
+import { authorizedMiddleware, adminMiddleware } from "../middlewares/authorized.middleware";
 
 const clientRouter = Router();
 const clientController = new ClientController();
 
-clientRouter.use(authorizedMiddleware);
+// Staff-only — the mobile client portal never calls this API (clients see
+// their own cases via /cases/mine, not the client directory).
+clientRouter.use(authorizedMiddleware, adminMiddleware);
 
 clientRouter.get("/", clientController.getAll);
 clientRouter.get("/:id", clientController.getById);

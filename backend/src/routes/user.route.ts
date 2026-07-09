@@ -10,7 +10,8 @@ userRouter.post("/register", userController.createUser);
 userRouter.post("/login", userController.loginUser);
 
 // Protected — require a valid Bearer token.
-userRouter.get("/users", authorizedMiddleware, userController.getAll);
+// (The full user list lives at GET /admin/users, gated by adminMiddleware —
+// there is no unauthenticated-to-role "list all users" route here.)
 userRouter.get("/me", authorizedMiddleware, userController.getMe);
 userRouter.get("/whoami", authorizedMiddleware, userController.whoami);
 userRouter.put("/update", authorizedMiddleware, upload.single("profileImage"), userController.updateUser);

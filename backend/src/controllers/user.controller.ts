@@ -8,24 +8,6 @@ import { ApiResponseHelper } from "../utils/apihelper.util";
 const userService = new UserService();
 
 export class UserController {
-    async getAll(req: Request, res: Response) {
-        try {
-            const page = parseInt(req.query.page as string) || 1;
-            const size = parseInt(req.query.size as string) || 10;
-            const search = (req.query.search as string) || undefined;
-
-            const { data, total } = await userService.getAll({ page, size, search });
-
-            return ApiResponseHelper.success(res, data, "Users fetched successfully", 200, {
-                page,
-                limit: size,
-                total,
-            });
-        } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
-        }
-    }
-
     async createUser(req: Request, res: Response) {
         try {
             const parsed = CreateUserDTO.safeParse(req.body);

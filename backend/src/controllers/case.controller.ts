@@ -29,7 +29,8 @@ export class CaseController {
 
     async getById(req: Request, res: Response) {
         try {
-            const found = await caseService.getById(req.params.id);
+            const user = req.user as IUser;
+            const found = await caseService.getById(req.params.id, { role: user.role, email: user.email });
             return ApiResponseHelper.success(res, found, "Case fetched successfully", 200);
         } catch (error: any) {
             return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);

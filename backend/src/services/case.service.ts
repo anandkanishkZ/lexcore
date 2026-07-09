@@ -10,9 +10,24 @@ export class CaseService {
         return caseRepository.getAll(query);
     }
 
-    async getById(id: string): Promise<ICase> {
+    /**
+     * `requestingUser` is omitted by admin-only call sites that already
+     * enforced access via adminMiddleware. When present (the shared
+     * GET /cases/:id route, reachable by clients), a non-admin caller may
+     * only fetch a case belonging to their own email — mirrors getMine's
+     * email-based scoping.
+     */
+    async getById(id: string, requestingUser?: { role: string; email: string }): Promise<ICase> {
         const found = await caseRepository.getById(id);
         if (!found) throw new HttpException(404, "Case not found");
+
+        if (requestingUser && requestingUser.role !== "admin") {
+            const client = found.client as unknown as { email?: string } | null;
+            if (!client || client.email !== requestingUser.email) {
+                throw new HttpException(403, "Access denied");
+            }
+        }
+
         return found;
     }
 
