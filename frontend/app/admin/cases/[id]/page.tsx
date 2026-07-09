@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { fetchCaseAction } from "@/lib/actions/case";
+import DocumentsPanel from "./_components/DocumentsPanel";
 
 interface PageProps {
     params: Promise<{ id: string }>;
+    searchParams: Promise<{ tab?: string; folder?: string }>;
 }
 
 const statusStyles: Record<string, string> = {
@@ -22,8 +24,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     );
 }
 
-export default async function CaseDetailPage({ params }: PageProps) {
+export default async function CaseDetailPage({ params, searchParams }: PageProps) {
     const { id } = await params;
+    const { tab: tabParam, folder } = await searchParams;
+    const tab = tabParam === "documents" ? "documents" : "details";
     const result = await fetchCaseAction(id);
 
     if (!result.success) {
@@ -55,6 +59,28 @@ export default async function CaseDetailPage({ params }: PageProps) {
                 </div>
             </div>
 
+            <div className="flex items-center rounded-lg border border-slate-200 p-0.5 bg-slate-50 w-fit mb-4">
+                <Link
+                    href={`/admin/cases/${id}`}
+                    className={`rounded-md px-4 py-1.5 text-xs font-medium transition ${
+                        tab === "details" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                    }`}
+                >
+                    Details
+                </Link>
+                <Link
+                    href={`/admin/cases/${id}?tab=documents`}
+                    className={`rounded-md px-4 py-1.5 text-xs font-medium transition ${
+                        tab === "documents" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                    }`}
+                >
+                    Documents
+                </Link>
+            </div>
+
+            {tab === "documents" ? (
+                <DocumentsPanel caseId={id} folderId={folder} />
+            ) : (
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
                 {/* Status + Type row */}
                 <div className="grid grid-cols-2 gap-4">
@@ -138,6 +164,7 @@ export default async function CaseDetailPage({ params }: PageProps) {
                     </Field>
                 </div>
             </div>
+            )}
         </div>
     );
 }

@@ -18,10 +18,23 @@ export class CaseService {
      * email-based scoping.
      */
     async getById(id: string, requestingUser?: { role: string; email: string }): Promise<ICase> {
+        if (requestingUser) return this.assertAccess(id, requestingUser);
+        const found = await caseRepository.getById(id);
+        if (!found) throw new HttpException(404, "Case not found");
+        return found;
+    }
+
+    /**
+     * Fetches a case and enforces the same admin-or-owner rule as getById,
+     * for callers (e.g. DocumentService) that need the check without going
+     * through the controller. Shared here rather than duplicated so every
+     * case-scoped resource enforces access the same way.
+     */
+    async assertAccess(id: string, requestingUser: { role: string; email: string }): Promise<ICase> {
         const found = await caseRepository.getById(id);
         if (!found) throw new HttpException(404, "Case not found");
 
-        if (requestingUser && requestingUser.role !== "admin") {
+        if (requestingUser.role !== "admin") {
             const client = found.client as unknown as { email?: string } | null;
             if (!client || client.email !== requestingUser.email) {
                 throw new HttpException(403, "Access denied");

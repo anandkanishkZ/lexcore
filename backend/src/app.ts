@@ -7,6 +7,7 @@ import clientRouter from "./routes/client.route";
 import caseRouter from "./routes/case.route";
 import memberRouter from "./routes/member.route";
 import adminUserRouter from "./routes/admin-user.route";
+import documentRouter from "./routes/document.route";
 import { HttpException } from "./exceptions/http-exception";
 import { ApiResponseHelper } from "./utils/apihelper.util";
 import { UPLOAD_DIR } from "./middlewares/upload.middleware";
@@ -31,6 +32,7 @@ app.use("/api/v1/clients", clientRouter);
 app.use("/api/v1/cases", caseRouter);
 app.use("/api/v1/members", memberRouter);
 app.use("/api/v1/admin/users", adminUserRouter);
+app.use("/api/v1/documents", documentRouter);
 
 app.use((req: Request, res: Response) => {
     ApiResponseHelper.error(res, "API not found", 404);
