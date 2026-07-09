@@ -1,33 +1,22 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AlertCircle, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { AlertCircle, Plus, ChevronLeft, ChevronRight, List, Kanban } from "lucide-react";
 import { fetchCasesAction } from "@/lib/actions/case";
+import CasesTable from "./_components/CasesTable";
+import CasesBoard from "./_components/CasesBoard";
 
 interface PageProps {
-    searchParams: Promise<{ page?: string; size?: string; search?: string; status?: string }>;
+    searchParams: Promise<{ page?: string; size?: string; search?: string; status?: string; view?: string }>;
 }
-
-const statusStyles: Record<string, string> = {
-    open: "bg-emerald-50 text-emerald-700",
-    pending: "bg-amber-50 text-amber-700",
-    closed: "bg-slate-100 text-slate-500",
-    "on hold": "bg-blue-50 text-blue-600",
-};
-
-const typeLabel: Record<string, string> = {
-    criminal: "Criminal",
-    civil: "Civil",
-    corporate: "Corporate",
-    family: "Family",
-    immigration: "Immigration",
-    "real estate": "Real Estate",
-    other: "Other",
-};
 
 export default async function CasesPage({ searchParams }: PageProps) {
     const params = await searchParams;
+    const view = params.view === "board" ? "board" : "list";
     const page = parseInt(params.page || "1");
-    const size = parseInt(params.size || "10");
+    // Board view groups every case into status columns, so it fetches a much
+    // larger page instead of the list view's paginated 10 — there's no
+    // per-column pagination yet.
+    const size = view === "board" ? 200 : parseInt(params.size || "10");
     const search = params.search || undefined;
     const status = params.status || undefined;
 
@@ -45,25 +34,56 @@ export default async function CasesPage({ searchParams }: PageProps) {
         const sp = new URLSearchParams({ page: String(p), size: String(size) });
         if (q) sp.set("search", q);
         if (st) sp.set("status", st);
+        if (view === "board") sp.set("view", "board");
+        return `/admin/cases?${sp}`;
+    }
+
+    function viewUrl(v: "list" | "board") {
+        const sp = new URLSearchParams({ page: "1", size: v === "board" ? "200" : "10" });
+        if (search) sp.set("search", search);
+        if (status) sp.set("status", status);
+        if (v === "board") sp.set("view", "board");
         return `/admin/cases?${sp}`;
     }
 
     return (
         <div>
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
                 <p className="text-sm text-slate-500">
                     All cases managed in Lexcore
                     {total > 0 && (
                         <span className="text-slate-400"> &middot; {total} total</span>
                     )}
                 </p>
-                <Link
-                    href="/admin/cases/create"
-                    className="flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2.5 text-sm font-medium text-white hover:bg-[#a3853a] transition"
-                >
-                    <Plus className="w-4 h-4" />
-                    New Case
-                </Link>
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center rounded-lg border border-slate-200 p-0.5 bg-slate-50">
+                        <Link
+                            href={viewUrl("list")}
+                            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                                view === "list" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                            }`}
+                        >
+                            <List className="w-3.5 h-3.5" />
+                            List
+                        </Link>
+                        <Link
+                            href={viewUrl("board")}
+                            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                                view === "board" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                            }`}
+                        >
+                            <Kanban className="w-3.5 h-3.5" />
+                            Board
+                        </Link>
+                    </div>
+                    <Link
+                        href="/admin/cases/create"
+                        className="flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2.5 text-sm font-medium text-white hover:bg-[#a3853a] transition"
+                    >
+                        <Plus className="w-4 h-4" />
+                        New Case
+                    </Link>
+                </div>
             </div>
 
             {/* Search + Status filter */}
@@ -105,83 +125,14 @@ export default async function CasesPage({ searchParams }: PageProps) {
                             : "Create your first case to get started."}
                     </p>
                 </div>
+            ) : view === "board" ? (
+                <CasesBoard cases={cases} />
             ) : (
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b border-slate-100">
-                                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide">
-                                        Case
-                                    </th>
-                                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide hidden sm:table-cell">
-                                        Type
-                                    </th>
-                                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide hidden md:table-cell">
-                                        Client
-                                    </th>
-                                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide hidden lg:table-cell">
-                                        Attorney
-                                    </th>
-                                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide">
-                                        Status
-                                    </th>
-                                    <th className="px-5 py-3" />
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {cases.map((c: any) => (
-                                    <tr key={c._id} className="hover:bg-slate-50 transition">
-                                        <td className="px-5 py-3.5">
-                                            <p className="font-medium text-slate-900">{c.title}</p>
-                                            <p className="text-xs text-slate-400 mt-0.5 font-mono">{c.caseNumber}</p>
-                                        </td>
-                                        <td className="px-5 py-3.5 text-slate-500 capitalize hidden sm:table-cell">
-                                            {typeLabel[c.type] ?? c.type}
-                                        </td>
-                                        <td className="px-5 py-3.5 text-slate-500 hidden md:table-cell">
-                                            {c.client
-                                                ? `${c.client.firstName} ${c.client.lastName}`
-                                                : "—"}
-                                        </td>
-                                        <td className="px-5 py-3.5 text-slate-500 hidden lg:table-cell">
-                                            {c.assignedAttorney
-                                                ? `${c.assignedAttorney.firstName} ${c.assignedAttorney.lastName}`
-                                                : <span className="text-slate-300">Unassigned</span>}
-                                        </td>
-                                        <td className="px-5 py-3.5">
-                                            <span
-                                                className={`inline-block px-2 py-0.5 rounded-full text-xs capitalize ${
-                                                    statusStyles[c.status] ?? "bg-slate-100 text-slate-600"
-                                                }`}
-                                            >
-                                                {c.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-5 py-3.5 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <Link
-                                                    href={`/admin/cases/${c._id}`}
-                                                    className="text-xs font-medium text-brand-gold hover:underline"
-                                                >
-                                                    View
-                                                </Link>
-                                                <Link
-                                                    href={`/admin/cases/${c._id}/edit`}
-                                                    className="text-xs font-medium text-slate-500 hover:text-slate-700 hover:underline"
-                                                >
-                                                    Edit
-                                                </Link>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                <>
+                    <CasesTable cases={cases} />
 
                     {totalPages > 1 && (
-                        <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100">
+                        <div className="flex items-center justify-between px-1 py-3">
                             <p className="text-xs text-slate-400">
                                 Page {page} of {totalPages}
                             </p>
@@ -205,7 +156,7 @@ export default async function CasesPage({ searchParams }: PageProps) {
                             </div>
                         </div>
                     )}
-                </div>
+                </>
             )}
         </div>
     );
