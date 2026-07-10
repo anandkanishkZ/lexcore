@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { AlertCircle, Clock, Star } from "lucide-react";
+import { AlertCircle, Clock, Star, LayoutGrid, List as ListIcon } from "lucide-react";
 import { fetchRecentDocumentsAction, fetchStarredDocumentsAction } from "@/lib/actions/document";
-import { fileMeta, formatSize, formatDate } from "@/lib/fileMeta";
+import { fileMeta, formatSize, formatDate, isImage, downloadUrl } from "@/lib/fileMeta";
 
 interface FileRow {
     _id: string;
@@ -14,14 +14,16 @@ interface FileRow {
     uploadedBy?: { firstName: string; lastName: string };
 }
 
+function EmptyState() {
+    return (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center py-16 text-center">
+            <p className="text-sm font-medium text-slate-700">Nothing here yet</p>
+        </div>
+    );
+}
+
 function FilesTable({ files }: { files: FileRow[] }) {
-    if (files.length === 0) {
-        return (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center py-16 text-center">
-                <p className="text-sm font-medium text-slate-700">Nothing here yet</p>
-            </div>
-        );
-    }
+    if (files.length === 0) return <EmptyState />;
 
     return (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -83,13 +85,75 @@ function FilesTable({ files }: { files: FileRow[] }) {
     );
 }
 
+function FilesGrid({ files }: { files: FileRow[] }) {
+    if (files.length === 0) return <EmptyState />;
+
+    return (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {files.map((file) => {
+                const { Icon, color, tint } = fileMeta(file.mimeType);
+                const showThumb = isImage(file.mimeType);
+                return (
+                    <a
+                        key={file._id}
+                        href={downloadUrl(file._id)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group relative bg-white rounded-xl border border-slate-200 overflow-hidden hover:border-brand-gold hover:shadow-sm transition"
+                    >
+                        {file.starred && (
+                            <Star className="absolute top-2 left-2 z-10 w-3.5 h-3.5 text-brand-gold fill-brand-gold drop-shadow" />
+                        )}
+                        <div className={`h-28 flex items-center justify-center ${showThumb ? "bg-slate-100" : tint}`}>
+                            {showThumb ? (
+                                // eslint-disable-next-line @next/next/no-img-element -- same-origin route-handler URL, not an optimizable static asset
+                                <img
+                                    src={downloadUrl(file._id)}
+                                    alt={file.name}
+                                    loading="lazy"
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <Icon className={`w-10 h-10 ${color}`} strokeWidth={1.25} />
+                            )}
+                        </div>
+                        <div className="px-3 py-2.5 border-t border-slate-100">
+                            <p className="text-xs font-medium text-slate-700 truncate">{file.name}</p>
+                            <p className="text-[11px] text-slate-400 mt-0.5 truncate">
+                                {file.case ? file.case.title : "—"} &middot; {formatSize(file.size)}
+                            </p>
+                        </div>
+                    </a>
+                );
+            })}
+        </div>
+    );
+}
+
 export default async function DocumentsPage({
     searchParams,
 }: {
-    searchParams: Promise<{ view?: string }>;
+    searchParams: Promise<{ view?: string; layout?: string }>;
 }) {
-    const { view } = await searchParams;
+    const { view, layout: layoutParam } = await searchParams;
     const isStarred = view === "starred";
+    const layout = layoutParam === "grid" ? "grid" : "list";
+
+    // Preserve the active tab (view) when switching layout, and vice versa.
+    const tabHref = (v: "recent" | "starred") => {
+        const params = new URLSearchParams();
+        if (v === "starred") params.set("view", "starred");
+        if (layout === "grid") params.set("layout", "grid");
+        const qs = params.toString();
+        return qs ? `/admin/documents?${qs}` : "/admin/documents";
+    };
+    const layoutHref = (l: "list" | "grid") => {
+        const params = new URLSearchParams();
+        if (isStarred) params.set("view", "starred");
+        if (l === "grid") params.set("layout", "grid");
+        const qs = params.toString();
+        return qs ? `/admin/documents?${qs}` : "/admin/documents";
+    };
 
     const result = isStarred ? await fetchStarredDocumentsAction() : await fetchRecentDocumentsAction();
 
@@ -112,28 +176,47 @@ export default async function DocumentsPage({
 
     return (
         <div>
-            <div className="flex items-center rounded-lg border border-slate-200 p-0.5 bg-slate-50 w-fit mb-6">
-                <Link
-                    href="/admin/documents"
-                    className={`flex items-center gap-1.5 rounded-md px-4 py-1.5 text-xs font-medium transition ${
-                        !isStarred ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                    }`}
-                >
-                    <Clock className="w-3.5 h-3.5" />
-                    Recent
-                </Link>
-                <Link
-                    href="/admin/documents?view=starred"
-                    className={`flex items-center gap-1.5 rounded-md px-4 py-1.5 text-xs font-medium transition ${
-                        isStarred ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                    }`}
-                >
-                    <Star className="w-3.5 h-3.5" />
-                    Starred
-                </Link>
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-6">
+                <div className="flex items-center rounded-lg border border-slate-200 p-0.5 bg-slate-50 w-fit">
+                    <Link
+                        href={tabHref("recent")}
+                        className={`flex items-center gap-1.5 rounded-md px-4 py-1.5 text-xs font-medium transition ${
+                            !isStarred ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                        }`}
+                    >
+                        <Clock className="w-3.5 h-3.5" />
+                        Recent
+                    </Link>
+                    <Link
+                        href={tabHref("starred")}
+                        className={`flex items-center gap-1.5 rounded-md px-4 py-1.5 text-xs font-medium transition ${
+                            isStarred ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                        }`}
+                    >
+                        <Star className="w-3.5 h-3.5" />
+                        Starred
+                    </Link>
+                </div>
+
+                <div className="flex items-center rounded-lg border border-slate-200 p-0.5 bg-slate-50">
+                    <Link
+                        href={layoutHref("list")}
+                        title="List view"
+                        className={`rounded-md p-1.5 transition ${layout === "list" ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                    >
+                        <ListIcon className="w-4 h-4" />
+                    </Link>
+                    <Link
+                        href={layoutHref("grid")}
+                        title="Grid view"
+                        className={`rounded-md p-1.5 transition ${layout === "grid" ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                    >
+                        <LayoutGrid className="w-4 h-4" />
+                    </Link>
+                </div>
             </div>
 
-            <FilesTable files={files} />
+            {layout === "grid" ? <FilesGrid files={files} /> : <FilesTable files={files} />}
         </div>
     );
 }
