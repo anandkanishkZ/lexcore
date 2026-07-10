@@ -1,17 +1,33 @@
-import { AlertCircle, ChevronRight, Home } from "lucide-react";
-import { fetchDocumentsAction } from "@/lib/actions/document";
+import { AlertCircle } from "lucide-react";
+import { fetchDocumentsAction, fetchTrashAction } from "@/lib/actions/document";
+import DocumentsToolbar from "./DocumentsToolbar";
+import DocumentsList from "./DocumentsList";
 import DocumentsGrid from "./DocumentsGrid";
-import UploadDocumentButton from "./UploadDocumentButton";
-import CreateFolderButton from "./CreateFolderButton";
+import DocumentsDropZone from "./DocumentsDropZone";
+import type { BreadcrumbEntry, FileRow, FolderRow } from "./documentTypes";
 
 export default async function DocumentsPanel({
     caseId,
     folderId,
+    layout = "list",
+    trashView = false,
+    search,
+    type,
+    sortBy,
+    sortOrder,
 }: {
     caseId: string;
     folderId?: string;
+    layout?: "list" | "grid";
+    trashView?: boolean;
+    search?: string;
+    type?: string;
+    sortBy?: "name" | "size" | "createdAt";
+    sortOrder?: "asc" | "desc";
 }) {
-    const result = await fetchDocumentsAction(caseId, folderId);
+    const result = trashView
+        ? await fetchTrashAction(caseId)
+        : await fetchDocumentsAction(caseId, folderId, { search, type, sortBy, sortOrder });
 
     if (!result.success) {
         return (
@@ -25,46 +41,36 @@ export default async function DocumentsPanel({
         );
     }
 
-    const { folder, folders, files } = result.data as {
-        folder: { _id: string; name: string } | null;
-        folders: { _id: string; name: string }[];
-        files: {
-            _id: string;
-            name: string;
-            mimeType: string;
-            size: number;
-            uploadedBy?: { firstName: string; lastName: string };
-            createdAt: string;
-        }[];
-    };
+    const currentFolder: { _id: string; name: string } | null = trashView ? null : result.data.folder;
+    const breadcrumb: BreadcrumbEntry[] = trashView ? [] : result.data.breadcrumb ?? [];
+    const folders: FolderRow[] = result.data.folders;
+    const files: FileRow[] = result.data.files;
+
+    const View = layout === "grid" ? DocumentsGrid : DocumentsList;
+    const content = <View caseId={caseId} folders={folders} files={files} mode={trashView ? "trash" : "normal"} />;
 
     return (
         <div>
-            <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-                {/* Breadcrumb is intentionally shallow (Root / current folder only,
-                    not the full ancestor chain) — see DocumentService.list. */}
-                <div className="flex items-center gap-1.5 text-sm">
-                    <a
-                        href={`?tab=documents`}
-                        className={`flex items-center gap-1 ${folder ? "text-slate-500 hover:text-slate-700" : "text-slate-900 font-medium"}`}
-                    >
-                        <Home className="w-3.5 h-3.5" />
-                        Root
-                    </a>
-                    {folder && (
-                        <>
-                            <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
-                            <span className="text-slate-900 font-medium">{folder.name}</span>
-                        </>
-                    )}
-                </div>
-                <div className="flex items-center gap-2">
-                    <CreateFolderButton caseId={caseId} parentId={folderId} />
-                    <UploadDocumentButton caseId={caseId} folderId={folderId} />
-                </div>
-            </div>
+            <DocumentsToolbar
+                caseId={caseId}
+                folderId={folderId}
+                breadcrumb={breadcrumb}
+                currentFolderName={currentFolder?.name}
+                layout={layout}
+                trashView={trashView}
+                search={search}
+                type={type}
+                sortBy={sortBy}
+                sortOrder={sortOrder}
+            />
 
-            <DocumentsGrid caseId={caseId} folders={folders} files={files} />
+            {trashView ? (
+                content
+            ) : (
+                <DocumentsDropZone caseId={caseId} folderId={folderId}>
+                    {content}
+                </DocumentsDropZone>
+            )}
         </div>
     );
 }

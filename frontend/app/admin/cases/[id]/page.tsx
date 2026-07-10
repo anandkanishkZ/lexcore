@@ -5,7 +5,16 @@ import DocumentsPanel from "./_components/DocumentsPanel";
 
 interface PageProps {
     params: Promise<{ id: string }>;
-    searchParams: Promise<{ tab?: string; folder?: string }>;
+    searchParams: Promise<{
+        tab?: string;
+        folder?: string;
+        view?: string;
+        layout?: string;
+        search?: string;
+        type?: string;
+        sortBy?: string;
+        sortOrder?: string;
+    }>;
 }
 
 const statusStyles: Record<string, string> = {
@@ -26,7 +35,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 export default async function CaseDetailPage({ params, searchParams }: PageProps) {
     const { id } = await params;
-    const { tab: tabParam, folder } = await searchParams;
+    const { tab: tabParam, folder, view, layout, search, type, sortBy, sortOrder } = await searchParams;
     const tab = tabParam === "documents" ? "documents" : "details";
     const result = await fetchCaseAction(id);
 
@@ -37,7 +46,7 @@ export default async function CaseDetailPage({ params, searchParams }: PageProps
     const c = result.data;
 
     return (
-        <div className="max-w-2xl">
+        <div className={tab === "documents" ? "max-w-5xl" : "max-w-2xl"}>
             <div className="flex items-center justify-between mb-6">
                 <div>
                     <h1 className="text-2xl font-semibold text-slate-900">{c.title}</h1>
@@ -79,7 +88,16 @@ export default async function CaseDetailPage({ params, searchParams }: PageProps
             </div>
 
             {tab === "documents" ? (
-                <DocumentsPanel caseId={id} folderId={folder} />
+                <DocumentsPanel
+                    caseId={id}
+                    folderId={folder}
+                    layout={layout === "grid" ? "grid" : "list"}
+                    trashView={view === "trash"}
+                    search={search}
+                    type={type}
+                    sortBy={sortBy as "name" | "size" | "createdAt" | undefined}
+                    sortOrder={sortOrder as "asc" | "desc" | undefined}
+                />
             ) : (
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
                 {/* Status + Type row */}

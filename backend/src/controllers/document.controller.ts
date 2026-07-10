@@ -1,15 +1,20 @@
 import { Request, Response } from "express";
 import fs from "fs";
 import { DocumentService } from "../services/document.service";
-import { CreateFolderDTO } from "../dtos/document.dto";
+import { CreateFolderDTO, UpdateFileDTO, UpdateFolderDTO, CopyFileDTO } from "../dtos/document.dto";
 import { IUser } from "../models/user.model";
 import { ApiResponseHelper } from "../utils/apihelper.util";
+import { FileListFilters } from "../repositories/case-file.repository";
 
 const documentService = new DocumentService();
 
 function requestingUser(req: Request) {
     const user = req.user as IUser;
     return { role: user.role, email: user.email };
+}
+
+function userId(req: Request) {
+    return (req.user as IUser)._id.toString();
 }
 
 export class DocumentController {
@@ -19,8 +24,56 @@ export class DocumentController {
             const folder = (req.query.folder as string) || undefined;
             if (!caseId) return ApiResponseHelper.error(res, "case is required", 400);
 
-            const data = await documentService.list(caseId, folder, requestingUser(req));
+            const filters: FileListFilters = {
+                search: (req.query.search as string) || undefined,
+                type: (req.query.type as string) || undefined,
+                sortBy: (req.query.sortBy as FileListFilters["sortBy"]) || undefined,
+                sortOrder: (req.query.sortOrder as FileListFilters["sortOrder"]) || undefined,
+            };
+
+            const data = await documentService.list(caseId, folder, requestingUser(req), filters);
             return ApiResponseHelper.success(res, data, "Documents fetched successfully", 200);
+        } catch (error: any) {
+            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+        }
+    }
+
+    async recent(req: Request, res: Response) {
+        try {
+            const files = await documentService.listRecent(requestingUser(req));
+            return ApiResponseHelper.success(res, files, "Recent documents fetched successfully", 200);
+        } catch (error: any) {
+            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+        }
+    }
+
+    async starred(req: Request, res: Response) {
+        try {
+            const data = await documentService.listStarred(requestingUser(req));
+            return ApiResponseHelper.success(res, data, "Starred documents fetched successfully", 200);
+        } catch (error: any) {
+            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+        }
+    }
+
+    async trash(req: Request, res: Response) {
+        try {
+            const caseId = (req.query.case as string) || "";
+            if (!caseId) return ApiResponseHelper.error(res, "case is required", 400);
+            const data = await documentService.listTrash(caseId, requestingUser(req));
+            return ApiResponseHelper.success(res, data, "Trash fetched successfully", 200);
+        } catch (error: any) {
+            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+        }
+    }
+
+    async moveTargets(req: Request, res: Response) {
+        try {
+            const caseId = (req.query.case as string) || "";
+            if (!caseId) return ApiResponseHelper.error(res, "case is required", 400);
+            const exclude = (req.query.exclude as string) || undefined;
+            const folders = await documentService.listMoveTargets(caseId, exclude, requestingUser(req));
+            return ApiResponseHelper.success(res, folders, "Folders fetched successfully", 200);
         } catch (error: any) {
             return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
         }
@@ -32,8 +85,7 @@ export class DocumentController {
             if (!parsed.success) {
                 return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
             }
-            const userId = (req.user as IUser)._id.toString();
-            const folder = await documentService.createFolder(parsed.data, userId, requestingUser(req));
+            const folder = await documentService.createFolder(parsed.data, userId(req), requestingUser(req));
             return ApiResponseHelper.success(res, folder, "Folder created successfully", 201);
         } catch (error: any) {
             return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
@@ -46,9 +98,8 @@ export class DocumentController {
 
             const caseId = (req.query.case as string) || "";
             const folder = (req.query.folder as string) || undefined;
-            const userId = (req.user as IUser)._id.toString();
 
-            const created = await documentService.recordUpload(req.file, caseId, folder, userId);
+            const created = await documentService.recordUpload(req.file, caseId, folder, userId(req));
             return ApiResponseHelper.success(res, created, "File uploaded successfully", 201);
         } catch (error: any) {
             return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
@@ -66,19 +117,94 @@ export class DocumentController {
         }
     }
 
-    async deleteFile(req: Request, res: Response) {
+    async copyFile(req: Request, res: Response) {
         try {
-            await documentService.deleteFile(String(req.params.id), requestingUser(req));
-            return ApiResponseHelper.success(res, null, "File deleted successfully", 200);
+            const parsed = CopyFileDTO.safeParse(req.body);
+            if (!parsed.success) {
+                return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
+            }
+            const copy = await documentService.copyFile(String(req.params.id), parsed.data.folder, userId(req), requestingUser(req));
+            return ApiResponseHelper.success(res, copy, "File copied successfully", 201);
         } catch (error: any) {
             return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
         }
     }
 
-    async deleteFolder(req: Request, res: Response) {
+    async updateFile(req: Request, res: Response) {
         try {
-            await documentService.deleteFolder(String(req.params.id), requestingUser(req));
-            return ApiResponseHelper.success(res, null, "Folder deleted successfully", 200);
+            const parsed = UpdateFileDTO.safeParse(req.body);
+            if (!parsed.success) {
+                return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
+            }
+            const updated = await documentService.updateFile(String(req.params.id), parsed.data, requestingUser(req));
+            return ApiResponseHelper.success(res, updated, "File updated successfully", 200);
+        } catch (error: any) {
+            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+        }
+    }
+
+    async updateFolder(req: Request, res: Response) {
+        try {
+            const parsed = UpdateFolderDTO.safeParse(req.body);
+            if (!parsed.success) {
+                return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
+            }
+            const updated = await documentService.updateFolder(String(req.params.id), parsed.data, requestingUser(req));
+            return ApiResponseHelper.success(res, updated, "Folder updated successfully", 200);
+        } catch (error: any) {
+            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+        }
+    }
+
+    async restoreFile(req: Request, res: Response) {
+        try {
+            const restored = await documentService.restoreFile(String(req.params.id), requestingUser(req));
+            return ApiResponseHelper.success(res, restored, "File restored successfully", 200);
+        } catch (error: any) {
+            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+        }
+    }
+
+    async restoreFolder(req: Request, res: Response) {
+        try {
+            const restored = await documentService.restoreFolder(String(req.params.id), requestingUser(req));
+            return ApiResponseHelper.success(res, restored, "Folder restored successfully", 200);
+        } catch (error: any) {
+            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+        }
+    }
+
+    async trashFile(req: Request, res: Response) {
+        try {
+            await documentService.trashFile(String(req.params.id), requestingUser(req));
+            return ApiResponseHelper.success(res, null, "File moved to trash", 200);
+        } catch (error: any) {
+            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+        }
+    }
+
+    async trashFolder(req: Request, res: Response) {
+        try {
+            await documentService.trashFolder(String(req.params.id), requestingUser(req));
+            return ApiResponseHelper.success(res, null, "Folder moved to trash", 200);
+        } catch (error: any) {
+            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+        }
+    }
+
+    async permanentlyDeleteFile(req: Request, res: Response) {
+        try {
+            await documentService.permanentlyDeleteFile(String(req.params.id), requestingUser(req));
+            return ApiResponseHelper.success(res, null, "File permanently deleted", 200);
+        } catch (error: any) {
+            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+        }
+    }
+
+    async permanentlyDeleteFolder(req: Request, res: Response) {
+        try {
+            await documentService.permanentlyDeleteFolder(String(req.params.id), requestingUser(req));
+            return ApiResponseHelper.success(res, null, "Folder permanently deleted", 200);
         } catch (error: any) {
             return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
         }

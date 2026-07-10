@@ -26,11 +26,29 @@ async function requireCaseQueryAccess(req: Request, res: Response, next: NextFun
 
 documentRouter.use(authorizedMiddleware);
 
+// Static/cross-case routes must be registered before the "/:id"-style routes
+// below, the same discipline used for /cases/mine in case.route.ts.
+documentRouter.get("/recent", documentController.recent);
+documentRouter.get("/starred", documentController.starred);
+documentRouter.get("/trash", documentController.trash);
+documentRouter.get("/folders/all", documentController.moveTargets);
+
 documentRouter.get("/", documentController.list);
 documentRouter.post("/folders", documentController.createFolder);
 documentRouter.post("/", requireCaseQueryAccess, caseFileUpload.single("file"), documentController.upload);
+
+documentRouter.post("/:id/copy", documentController.copyFile);
+documentRouter.post("/:id/restore", documentController.restoreFile);
+documentRouter.post("/folders/:id/restore", documentController.restoreFolder);
+
+documentRouter.patch("/:id", documentController.updateFile);
+documentRouter.patch("/folders/:id", documentController.updateFolder);
+
 documentRouter.get("/:id/download", documentController.download);
-documentRouter.delete("/folders/:id", documentController.deleteFolder);
-documentRouter.delete("/:id", documentController.deleteFile);
+
+documentRouter.delete("/:id/permanent", documentController.permanentlyDeleteFile);
+documentRouter.delete("/folders/:id/permanent", documentController.permanentlyDeleteFolder);
+documentRouter.delete("/folders/:id", documentController.trashFolder);
+documentRouter.delete("/:id", documentController.trashFile);
 
 export default documentRouter;
