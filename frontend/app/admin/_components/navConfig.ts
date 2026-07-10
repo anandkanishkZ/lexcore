@@ -2,6 +2,7 @@ import {
     LayoutDashboard,
     Users,
     Briefcase,
+    Inbox,
     FolderOpen,
     CalendarDays,
     Receipt,
@@ -38,6 +39,7 @@ export const navSections: NavSection[] = [
                 matchPrefixes: ["/admin/clients"],
             },
             { label: "Cases", href: "/admin/cases", icon: Briefcase },
+            { label: "Case Requests", href: "/admin/case-requests", icon: Inbox },
             { label: "Documents", href: "/admin/documents", icon: FolderOpen },
             { label: "Calendar", href: "/admin/calendar", icon: CalendarDays, soon: true },
             { label: "Billing", href: "/admin/billing", icon: Receipt, soon: true },
@@ -57,6 +59,7 @@ export function getPageTitle(pathname: string): string {
     if (pathname.match(/^\/admin\/clients\/[^/]+\/edit$/)) return "Edit Client";
     if (pathname.match(/^\/admin\/clients\/[^/]+$/)) return "Client Details";
     if (pathname === "/admin/cases") return "Cases";
+    if (pathname === "/admin/case-requests") return "Case Requests";
     if (pathname === "/admin/cases/create") return "New Case";
     if (pathname.match(/^\/admin\/cases\/[^/]+\/edit$/)) return "Edit Case";
     if (pathname.match(/^\/admin\/cases\/[^/]+$/)) return "Case Details";
