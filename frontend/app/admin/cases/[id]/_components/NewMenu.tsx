@@ -30,13 +30,16 @@ export default function NewMenu({ caseId, folderId }: { caseId: string; folderId
     }, [open]);
 
     const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const list = e.target.files;
-        e.target.value = "";
+        // Copy the File objects into an array BEFORE resetting the input.
+        // `input.value = ""` empties the live FileList, so reading it afterwards
+        // (or Array.from-ing the old reference) yields zero files — which is why
+        // the picker opened but nothing uploaded.
+        const files = Array.from(e.target.files ?? []);
+        e.target.value = ""; // allow re-selecting the same file(s) next time
         // Close the menu now — after the picker has already returned files, so
         // unmounting the label can't interrupt the native file-picker trigger.
         setOpen(false);
-        if (!list || list.length === 0) return;
-        const files = Array.from(list);
+        if (files.length === 0) return;
         setError("");
         startTransition(async () => {
             const results = await Promise.all(files.map((f) => uploadDocument(caseId, folderId, f)));
