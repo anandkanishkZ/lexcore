@@ -16,6 +16,7 @@ import calendarEventRouter from "./routes/calendar-event.route";
 import settingsRouter from "./routes/settings.route";
 import notificationRouter from "./routes/notification.route";
 import auditLogRouter from "./routes/audit-log.route";
+import invoiceRouter from "./routes/invoice.route";
 import { HttpException } from "./exceptions/http-exception";
 import { ApiResponseHelper } from "./utils/apihelper.util";
 import { UPLOAD_DIR } from "./middlewares/upload.middleware";
@@ -54,6 +55,7 @@ app.use("/api/v1/calendar-events", calendarEventRouter);
 app.use("/api/v1/settings", settingsRouter);
 app.use("/api/v1/notifications", notificationRouter);
 app.use("/api/v1/audit-logs", auditLogRouter);
+app.use("/api/v1/invoices", invoiceRouter);
 
 app.use((req: Request, res: Response) => {
     ApiResponseHelper.error(res, "API not found", 404);

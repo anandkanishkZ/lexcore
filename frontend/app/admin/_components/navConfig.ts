@@ -47,7 +47,7 @@ export const navSections: NavSection[] = [
             { label: "Documents", href: "/admin/documents", icon: FolderOpen },
             { label: "Tasks", href: "/admin/tasks", icon: ListChecks },
             { label: "Calendar", href: "/admin/calendar", icon: CalendarDays },
-            { label: "Billing", href: "/admin/billing", icon: Receipt, soon: true },
+            { label: "Billing", href: "/admin/billing", icon: Receipt },
         ],
     },
     {
@@ -74,6 +74,9 @@ export function getPageTitle(pathname: string): string {
     if (pathname === "/admin/documents") return "Documents";
     if (pathname === "/admin/tasks") return "Tasks";
     if (pathname === "/admin/calendar") return "Calendar";
+    if (pathname === "/admin/billing") return "Billing";
+    if (pathname === "/admin/billing/create") return "New Invoice";
+    if (pathname.match(/^\/admin\/billing\/[^/]+$/)) return "Invoice Details";
     if (pathname === "/admin/settings") return "Firm Settings";
     if (pathname === "/admin/audit-log") return "Audit Log";
     if (pathname === "/admin/profile") return "Profile Settings";
