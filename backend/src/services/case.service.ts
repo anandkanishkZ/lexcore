@@ -2,6 +2,7 @@ import { CaseMongoRepository, CaseQuery } from "../repositories/case.repository"
 import { CreateCaseDTO, UpdateCaseDTO } from "../dtos/case.dto";
 import { ICase } from "../models/case.model";
 import { HttpException } from "../exceptions/http-exception";
+import { logAudit } from "../utils/audit-log.util";
 
 const caseRepository = new CaseMongoRepository();
 
@@ -63,9 +64,24 @@ export class CaseService {
         });
     }
 
-    async update(id: string, data: UpdateCaseDTO): Promise<ICase> {
+    /**
+     * `requestingUser` is omitted by call sites that don't need the check
+     * (none currently — every route reaching this goes through
+     * staffMiddleware, which already excludes clients). A non-admin staff
+     * member may only update a case they're the assignedAttorney on; admins
+     * can update any case.
+     */
+    async update(id: string, data: UpdateCaseDTO, requestingUser?: { role: string; userId: string }): Promise<ICase> {
         const existing = await caseRepository.getById(id);
         if (!existing) throw new HttpException(404, "Case not found");
+
+        if (requestingUser && requestingUser.role !== "admin") {
+            const assignedAttorney = existing.assignedAttorney as unknown as { _id?: { toString(): string } } | null;
+            const assignedId = assignedAttorney?._id?.toString();
+            if (assignedId !== requestingUser.userId) {
+                throw new HttpException(403, "You can only edit cases assigned to you");
+            }
+        }
 
         const updatePayload: any = { ...data };
         if (data.client) updatePayload.client = data.client;
@@ -80,10 +96,20 @@ export class CaseService {
         return updated;
     }
 
-    async delete(id: string): Promise<boolean> {
+    async delete(id: string, actorId?: string): Promise<boolean> {
         const existing = await caseRepository.getById(id);
         if (!existing) throw new HttpException(404, "Case not found");
-        return caseRepository.delete(id);
+        const deleted = await caseRepository.delete(id);
+        if (deleted && actorId) {
+            await logAudit({
+                actorId,
+                action: "case.delete",
+                entityType: "Case",
+                entityId: id,
+                metadata: `${existing.caseNumber} — ${existing.title}`,
+            });
+        }
+        return deleted;
     }
 
     async getMine(email: string): Promise<ICase[]> {

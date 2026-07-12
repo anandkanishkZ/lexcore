@@ -5,14 +5,18 @@ import { CreateCaseRequestDTO, ApproveCaseRequestDTO, RejectCaseRequestDTO } fro
 import { ICaseRequest } from "../models/case-request.model";
 import { HttpException } from "../exceptions/http-exception";
 import { CaseService } from "./case.service";
+import { NotificationService } from "./notification.service";
+import { logAudit } from "../utils/audit-log.util";
+import { sendMail } from "../utils/mail.util";
 
 const caseRequestRepository = new CaseRequestMongoRepository();
 const userRepository = new UserMongoRepository();
 const caseService = new CaseService();
+const notificationService = new NotificationService();
 
 export class CaseRequestService {
     async create(data: CreateCaseRequestDTO, requestedByUserId: string): Promise<ICaseRequest> {
-        return caseRequestRepository.create({
+        const created = await caseRequestRepository.create({
             requestedBy: requestedByUserId as any,
             title: data.title,
             type: data.type,
@@ -20,6 +24,18 @@ export class CaseRequestService {
             phone: data.phone,
             status: "pending",
         });
+
+        await notificationService.notifyAdmins(
+            "New case request",
+            `A new case request "${data.title}" was submitted and is awaiting review.`,
+            { type: "CaseRequest", id: created._id.toString() }
+        );
+        await notificationService.emailAdmins(
+            "New case request submitted",
+            `A new case request "${data.title}" was submitted and is awaiting review in the admin console.`
+        );
+
+        return created;
     }
 
     async getMine(userId: string): Promise<ICaseRequest[]> {
@@ -49,7 +65,10 @@ export class CaseRequestService {
         if (!request) throw new HttpException(404, "Case request not found");
         if (request.status !== "pending") throw new HttpException(400, "This request has already been reviewed");
 
-        const requester = await userRepository.getUserById(request.requestedBy.toString());
+        // getById populates requestedBy, so it's a subdocument here, not a raw
+        // ObjectId — extract its _id rather than .toString()-ing the document.
+        const requestedById = (request.requestedBy as unknown as { _id: { toString(): string } })._id.toString();
+        const requester = await userRepository.getUserById(requestedById);
         if (!requester) throw new HttpException(404, "Requesting user not found");
 
         let client = await ClientModel.findOne({ email: requester.email });
@@ -84,6 +103,20 @@ export class CaseRequestService {
             resultingCase: createdCase._id,
         });
         if (!updated) throw new HttpException(500, "Failed to update case request");
+
+        await logAudit({
+            actorId: staffUserId,
+            action: "case-request.approve",
+            entityType: "CaseRequest",
+            entityId: id,
+            metadata: `${request.title} → ${createdCase.caseNumber}`,
+        });
+        await sendMail(
+            requester.email,
+            "Your case request was approved",
+            `Good news — your request "${request.title}" was approved. Your case number is ${createdCase.caseNumber}. ` +
+                `You can view it in the Lexcore app under My Cases.`
+        );
         return updated;
     }
 
@@ -92,12 +125,30 @@ export class CaseRequestService {
         if (!request) throw new HttpException(404, "Case request not found");
         if (request.status !== "pending") throw new HttpException(400, "This request has already been reviewed");
 
+        const requestedById = (request.requestedBy as unknown as { _id: { toString(): string } })._id.toString();
+        const requester = await userRepository.getUserById(requestedById);
+
         const updated = await caseRequestRepository.update(id, {
             status: "rejected",
             reviewedBy: staffUserId as any,
             reviewNote: data.reviewNote,
         });
         if (!updated) throw new HttpException(500, "Failed to update case request");
+
+        await logAudit({
+            actorId: staffUserId,
+            action: "case-request.reject",
+            entityType: "CaseRequest",
+            entityId: id,
+            metadata: data.reviewNote,
+        });
+        if (requester) {
+            await sendMail(
+                requester.email,
+                "Update on your case request",
+                `Your request "${request.title}" was not approved. Reason: ${data.reviewNote}`
+            );
+        }
         return updated;
     }
 }

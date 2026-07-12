@@ -10,3 +10,17 @@ if (!process.env.SECRET_KEY) {
     throw new Error("SECRET_KEY environment variable is required — set it in .env before starting the server.");
 }
 export const SECRET_KEY: string = process.env.SECRET_KEY;
+
+// Browsers only — native clients (the mobile app, curl, Postman) aren't
+// subject to CORS, so this doesn't gate API access generally, only which
+// web origins may call it from client-side JS.
+export const CORS_ORIGINS: string[] = (process.env.CORS_ORIGIN || "http://localhost:3000")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+export const SMTP_HOST: string | undefined = process.env.SMTP_HOST || undefined;
+export const SMTP_PORT: number = Number(process.env.SMTP_PORT) || 587;
+export const SMTP_USER: string | undefined = process.env.SMTP_USER || undefined;
+export const SMTP_PASS: string | undefined = process.env.SMTP_PASS || undefined;
+export const SMTP_FROM: string = process.env.SMTP_FROM || "Lexcore <no-reply@lexcore.local>";

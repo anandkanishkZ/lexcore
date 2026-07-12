@@ -2,12 +2,13 @@ import { Router } from "express";
 import { UserController } from "../controllers/user.controller";
 import { authorizedMiddleware } from "../middlewares/authorized.middleware";
 import { upload } from "../middlewares/upload.middleware";
+import { authRateLimiter } from "../middlewares/rate-limit.middleware";
 
 const userRouter = Router();
 const userController = new UserController();
 
-userRouter.post("/register", userController.createUser);
-userRouter.post("/login", userController.loginUser);
+userRouter.post("/register", authRateLimiter, userController.createUser);
+userRouter.post("/login", authRateLimiter, userController.loginUser);
 
 // Protected — require a valid Bearer token.
 // (The full user list lives at GET /admin/users, gated by adminMiddleware —

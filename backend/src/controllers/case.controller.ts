@@ -57,7 +57,11 @@ export class CaseController {
             if (!parsed.success) {
                 return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
             }
-            const updated = await caseService.update(req.params.id, parsed.data);
+            const user = req.user as IUser;
+            const updated = await caseService.update(req.params.id, parsed.data, {
+                role: user.role,
+                userId: user._id.toString(),
+            });
             return ApiResponseHelper.success(res, updated, "Case updated successfully", 200);
         } catch (error: any) {
             return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
@@ -66,7 +70,8 @@ export class CaseController {
 
     async delete(req: Request, res: Response) {
         try {
-            await caseService.delete(req.params.id);
+            const actorId = (req.user as IUser)._id.toString();
+            await caseService.delete(req.params.id, actorId);
             return ApiResponseHelper.success(res, null, "Case deleted successfully", 200);
         } catch (error: any) {
             return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);

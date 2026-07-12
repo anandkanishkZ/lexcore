@@ -43,3 +43,22 @@ export const adminMiddleware = (req: Request, res: Response, next: NextFunction)
         return ApiResponseHelper.error(res, error.message || "Forbidden", 403);
     }
 };
+
+/**
+ * Any staff member — `role: "admin"` (full access) OR any non-client
+ * `userType` (attorney, paralegal, etc.). Distinct from adminMiddleware,
+ * which is reserved for genuinely admin-only actions (user management, firm
+ * settings, deleting other people's records). Without this, a staff account
+ * created with `role: "user"` (the schema default when unset) could sign in
+ * but couldn't use the console at all — every route required full admin.
+ */
+export const staffMiddleware = (req: Request, res: Response, next: NextFunction) => {
+    try {
+        if (!req.user || (req.user.role !== "admin" && req.user.userType === "client")) {
+            throw new HttpException(403, "Access denied");
+        }
+        next();
+    } catch (error: any) {
+        return ApiResponseHelper.error(res, error.message || "Forbidden", 403);
+    }
+};

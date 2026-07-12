@@ -4,6 +4,7 @@ import { UserService } from "../services/user.service";
 import { IUser } from "../models/user.model";
 import { ApiResponseHelper } from "../utils/apihelper.util";
 import { HttpException } from "../exceptions/http-exception";
+import { logAudit } from "../utils/audit-log.util";
 
 const userService = new UserService();
 
@@ -55,6 +56,15 @@ export class AdminUserController {
                 return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
             }
             const user = await userService.adminUpdateUser(req.params.id as string, parsed.data);
+            if (parsed.data.role || parsed.data.userType) {
+                await logAudit({
+                    actorId: (req.user as IUser)._id.toString(),
+                    action: "user.role-change",
+                    entityType: "User",
+                    entityId: req.params.id as string,
+                    metadata: `role=${parsed.data.role ?? "unchanged"}, userType=${parsed.data.userType ?? "unchanged"}`,
+                });
+            }
             return ApiResponseHelper.success(res, user, "User updated successfully", 200);
         } catch (error: any) {
             return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
@@ -69,6 +79,12 @@ export class AdminUserController {
                 throw new HttpException(400, "You cannot delete your own account");
             }
             await userService.deleteUser(id);
+            await logAudit({
+                actorId: requester._id.toString(),
+                action: "user.delete",
+                entityType: "User",
+                entityId: id,
+            });
             return ApiResponseHelper.success(res, null, "User deleted successfully", 200);
         } catch (error: any) {
             return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);

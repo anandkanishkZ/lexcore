@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { CaseController } from "../controllers/case.controller";
-import { authorizedMiddleware, adminMiddleware } from "../middlewares/authorized.middleware";
+import { authorizedMiddleware, staffMiddleware, adminMiddleware } from "../middlewares/authorized.middleware";
 
 const caseRouter = Router();
 const caseController = new CaseController();
@@ -15,10 +15,12 @@ caseRouter.use(authorizedMiddleware);
 caseRouter.get("/mine", caseController.getMine);
 caseRouter.get("/:id", caseController.getById);
 
-// Everything else (browsing/creating/editing/deleting cases) is staff-only.
-caseRouter.get("/", adminMiddleware, caseController.getAll);
-caseRouter.post("/", adminMiddleware, caseController.create);
-caseRouter.put("/:id", adminMiddleware, caseController.update);
+// Browsing/creating/editing is any-staff; a non-admin editor is further
+// restricted to cases they're assignedAttorney on (CaseService.update).
+// Deleting a case stays admin-only.
+caseRouter.get("/", staffMiddleware, caseController.getAll);
+caseRouter.post("/", staffMiddleware, caseController.create);
+caseRouter.put("/:id", staffMiddleware, caseController.update);
 caseRouter.delete("/:id", adminMiddleware, caseController.delete);
 
 export default caseRouter;

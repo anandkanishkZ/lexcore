@@ -3,6 +3,7 @@ import { CreateClientDTO, UpdateClientDTO } from "../dtos/client.dto";
 import { ClientService } from "../services/client.service";
 import { IUser } from "../models/user.model";
 import { ApiResponseHelper } from "../utils/apihelper.util";
+import { logAudit } from "../utils/audit-log.util";
 
 const clientService = new ClientService();
 
@@ -67,6 +68,12 @@ export class ClientController {
         try {
             const id = req.params.id as string;
             await clientService.delete(id);
+            await logAudit({
+                actorId: (req.user as IUser)._id.toString(),
+                action: "client.delete",
+                entityType: "Client",
+                entityId: id,
+            });
             return ApiResponseHelper.success(res, null, "Client deleted successfully", 200);
         } catch (error: any) {
             return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
