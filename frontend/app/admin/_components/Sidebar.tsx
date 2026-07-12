@@ -4,9 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Scale } from "lucide-react";
 import { navSections } from "./navConfig";
+import { useAuth } from "@/lib/contexts/AuthContext";
 
 export default function Sidebar() {
     const pathname = usePathname();
+    const { user } = useAuth();
+    const isAdmin = user?.role === "admin";
 
     return (
         <aside className="w-64 shrink-0 bg-brand flex flex-col">
@@ -31,7 +34,9 @@ export default function Sidebar() {
                             {section.label}
                         </p>
                         <div className="space-y-0.5">
-                            {section.items.map((item) => {
+                            {section.items
+                                .filter((item) => !item.adminOnly || isAdmin)
+                                .map((item) => {
                                 const isActive =
                                     item.href === "/admin"
                                         ? pathname === "/admin"

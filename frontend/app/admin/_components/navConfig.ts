@@ -7,6 +7,8 @@ import {
     CalendarDays,
     Receipt,
     Settings,
+    ListChecks,
+    ShieldCheck,
     type LucideIcon,
 } from "lucide-react";
 
@@ -15,6 +17,8 @@ export interface NavItem {
     href: string;
     icon: LucideIcon;
     soon?: boolean;
+    /** Hidden from the sidebar for non-admin staff (role !== "admin"). */
+    adminOnly?: boolean;
     /** Additional path prefixes that should also mark this item active. */
     matchPrefixes?: string[];
 }
@@ -41,13 +45,17 @@ export const navSections: NavSection[] = [
             { label: "Cases", href: "/admin/cases", icon: Briefcase },
             { label: "Case Requests", href: "/admin/case-requests", icon: Inbox },
             { label: "Documents", href: "/admin/documents", icon: FolderOpen },
-            { label: "Calendar", href: "/admin/calendar", icon: CalendarDays, soon: true },
+            { label: "Tasks", href: "/admin/tasks", icon: ListChecks },
+            { label: "Calendar", href: "/admin/calendar", icon: CalendarDays },
             { label: "Billing", href: "/admin/billing", icon: Receipt, soon: true },
         ],
     },
     {
         label: "Administration",
-        items: [{ label: "Firm Settings", href: "/admin/settings", icon: Settings, soon: true }],
+        items: [
+            { label: "Firm Settings", href: "/admin/settings", icon: Settings, adminOnly: true },
+            { label: "Audit Log", href: "/admin/audit-log", icon: ShieldCheck, adminOnly: true },
+        ],
     },
 ];
 
@@ -64,6 +72,10 @@ export function getPageTitle(pathname: string): string {
     if (pathname.match(/^\/admin\/cases\/[^/]+\/edit$/)) return "Edit Case";
     if (pathname.match(/^\/admin\/cases\/[^/]+$/)) return "Case Details";
     if (pathname === "/admin/documents") return "Documents";
+    if (pathname === "/admin/tasks") return "Tasks";
+    if (pathname === "/admin/calendar") return "Calendar";
+    if (pathname === "/admin/settings") return "Firm Settings";
+    if (pathname === "/admin/audit-log") return "Audit Log";
     if (pathname === "/admin/profile") return "Profile Settings";
     if (pathname === "/admin/profile/password") return "Change Password";
     return "Admin Panel";

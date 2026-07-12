@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronDown, LogOut, UserRound } from "lucide-react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { getPageTitle } from "./navConfig";
+import NotificationBell from "./NotificationBell";
 
 export default function Topbar() {
     const pathname = usePathname();
@@ -32,6 +33,8 @@ export default function Topbar() {
                 {getPageTitle(pathname)}
             </h1>
 
+            <div className="flex items-center gap-2">
+            <NotificationBell />
             <div className="relative" ref={menuRef}>
                 <button
                     onClick={() => setMenuOpen((v) => !v)}
@@ -70,6 +73,7 @@ export default function Topbar() {
                         </button>
                     </div>
                 )}
+            </div>
             </div>
         </header>
     );
