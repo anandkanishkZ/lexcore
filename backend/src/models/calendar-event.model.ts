@@ -37,4 +37,8 @@ const CalendarEventMongoSchema = new Schema<ICalendarEvent>(
     { timestamps: true }
 );
 
+// date is both range-filtered (month view) and the default sort key.
+CalendarEventMongoSchema.index({ date: 1 });
+CalendarEventMongoSchema.index({ case: 1 });
+
 export const CalendarEventModel = mongoose.model<ICalendarEvent>("CalendarEvent", CalendarEventMongoSchema);

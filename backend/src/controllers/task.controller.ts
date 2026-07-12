@@ -3,6 +3,7 @@ import { CreateTaskDTO, UpdateTaskDTO } from "../dtos/task.dto";
 import { TaskService } from "../services/task.service";
 import { IUser } from "../models/user.model";
 import { ApiResponseHelper } from "../utils/apihelper.util";
+import { handleControllerError } from "../utils/error-handler.util";
 
 const taskService = new TaskService();
 
@@ -15,16 +16,16 @@ export class TaskController {
             const data = await taskService.getAll({ status, assignee, case: caseId });
             return ApiResponseHelper.success(res, data, "Tasks fetched successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "TaskController");
         }
     }
 
     async getById(req: Request, res: Response) {
         try {
-            const found = await taskService.getById(req.params.id);
+            const found = await taskService.getById(req.params.id as string);
             return ApiResponseHelper.success(res, found, "Task fetched successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "TaskController");
         }
     }
 
@@ -38,7 +39,7 @@ export class TaskController {
             const created = await taskService.create(parsed.data, userId);
             return ApiResponseHelper.success(res, created, "Task created successfully", 201);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "TaskController");
         }
     }
 
@@ -48,19 +49,19 @@ export class TaskController {
             if (!parsed.success) {
                 return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
             }
-            const updated = await taskService.update(req.params.id, parsed.data);
+            const updated = await taskService.update(req.params.id as string, parsed.data);
             return ApiResponseHelper.success(res, updated, "Task updated successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "TaskController");
         }
     }
 
     async delete(req: Request, res: Response) {
         try {
-            await taskService.delete(req.params.id);
+            await taskService.delete(req.params.id as string);
             return ApiResponseHelper.success(res, null, "Task deleted successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "TaskController");
         }
     }
 }

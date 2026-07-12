@@ -3,6 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import multer from "multer";
+import mongoose from "mongoose";
 import userRouter from "./routes/user.route";
 import clientRouter from "./routes/client.route";
 import caseRouter from "./routes/case.route";
@@ -33,9 +34,13 @@ app.use(morgan("combined"));
 // Serve uploaded files (e.g. profile pictures) at /uploads/<filename>.
 app.use("/uploads", express.static(UPLOAD_DIR));
 
-app.get("/api/v1/health", (req: Request, res: Response) =>
-    ApiResponseHelper.success(res, { uptime: process.uptime() }, "OK", 200)
-);
+app.get("/api/v1/health", (req: Request, res: Response) => {
+    const dbConnected = mongoose.connection.readyState === 1;
+    if (!dbConnected) {
+        return ApiResponseHelper.error(res, "Database not connected", 503, null);
+    }
+    return ApiResponseHelper.success(res, { uptime: process.uptime(), database: "connected" }, "OK", 200);
+});
 
 app.use("/api/v1/auth", userRouter);
 app.use("/api/v1/clients", clientRouter);
@@ -62,6 +67,9 @@ app.use((error: HttpException | Error, req: Request, res: Response, next: NextFu
     if (error instanceof multer.MulterError) {
         return ApiResponseHelper.error(res, error.message, 400);
     }
+    // Anything else is unexpected — log it server-side (nothing did before) and
+    // keep the client-facing message generic, same rule as handleControllerError.
+    console.error("[unhandled error]", error);
     return ApiResponseHelper.error(res, "Internal Server Error", 500);
 });
 

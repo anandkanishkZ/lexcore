@@ -23,4 +23,9 @@ const NotificationMongoSchema = new Schema<INotification>(
     { timestamps: { createdAt: true, updatedAt: false } }
 );
 
+// Matches getMine's find({user}).sort({createdAt}) and countUnread/
+// markAllRead's find({user, isRead}) shapes exactly.
+NotificationMongoSchema.index({ user: 1, createdAt: -1 });
+NotificationMongoSchema.index({ user: 1, isRead: 1 });
+
 export const NotificationModel = mongoose.model<INotification>("Notification", NotificationMongoSchema);

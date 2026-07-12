@@ -40,4 +40,10 @@ const CaseMongoSchema = new Schema<ICase>(
     { timestamps: true }
 );
 
+// status is filtered on the admin list view; client backs getMineByEmail's
+// second query (the ClientModel lookup itself is already covered by its own
+// unique index on email).
+CaseMongoSchema.index({ status: 1 });
+CaseMongoSchema.index({ client: 1 });
+
 export const CaseModel = mongoose.model<ICase>("Case", CaseMongoSchema);

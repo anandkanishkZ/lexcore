@@ -38,4 +38,7 @@ const CaseRequestMongoSchema = new Schema<ICaseRequest>(
     { timestamps: true }
 );
 
+CaseRequestMongoSchema.index({ status: 1 });
+CaseRequestMongoSchema.index({ requestedBy: 1 });
+
 export const CaseRequestModel = mongoose.model<ICaseRequest>("CaseRequest", CaseRequestMongoSchema);

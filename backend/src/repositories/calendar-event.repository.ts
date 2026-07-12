@@ -16,11 +16,15 @@ export class CalendarEventMongoRepository {
         }
         if (query.case) filter.case = query.case;
 
+        // Normally date-range-scoped by the frontend's month view (naturally
+        // small), but a caller that omits from/to should still get a bounded
+        // result instead of the entire collection.
         return CalendarEventModel.find(filter)
             .populate("case", "title caseNumber")
             .populate("participants", "firstName lastName email")
             .populate("createdBy", "firstName lastName")
-            .sort({ date: 1 });
+            .sort({ date: 1 })
+            .limit(500);
     }
 
     async getById(id: string): Promise<ICalendarEvent | null> {

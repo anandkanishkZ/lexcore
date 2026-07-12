@@ -9,11 +9,14 @@ export class CaseRequestMongoRepository {
         const filter: any = {};
         if (status) filter.status = status;
 
+        // Reviewed as a status-filtered queue, not a paginated table — same
+        // "bounded, not paginated" reasoning as tasks/calendar-events.
         return CaseRequestModel.find(filter)
             .populate("requestedBy", "firstName lastName email")
             .populate("reviewedBy", "firstName lastName")
             .populate("resultingCase", "caseNumber title")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .limit(500);
     }
 
     async getById(id: string): Promise<ICaseRequest | null> {
@@ -26,7 +29,8 @@ export class CaseRequestMongoRepository {
     async getMineByUserId(userId: string): Promise<ICaseRequest[]> {
         return CaseRequestModel.find({ requestedBy: userId })
             .populate("resultingCase", "caseNumber title")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .limit(200);
     }
 
     async update(id: string, data: Partial<ICaseRequest>): Promise<ICaseRequest | null> {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bell, Check } from "lucide-react";
 import { fetchNotificationsAction, markNotificationReadAction, markAllNotificationsReadAction } from "@/lib/actions/notification";
 
@@ -28,21 +28,25 @@ export default function NotificationBell() {
     const [unread, setUnread] = useState(0);
     const menuRef = useRef<HTMLDivElement>(null);
 
-    const load = useCallback(async () => {
-        const result = await fetchNotificationsAction();
-        if (result.success) {
+    useEffect(() => {
+        let ignore = false;
+
+        async function poll() {
+            const result = await fetchNotificationsAction();
+            if (ignore || !result.success) return;
             setNotifications(result.data.notifications ?? []);
             setUnread(result.data.unread ?? 0);
         }
-    }, []);
 
-    useEffect(() => {
-        load();
+        poll();
         // Polling, not WebSocket — proportionate for a firm-internal bell, not
         // a chat app. 30s keeps the badge reasonably fresh without hammering the API.
-        const interval = setInterval(load, 30000);
-        return () => clearInterval(interval);
-    }, [load]);
+        const interval = setInterval(poll, 30000);
+        return () => {
+            ignore = true;
+            clearInterval(interval);
+        };
+    }, []);
 
     useEffect(() => {
         function onClickOutside(e: MouseEvent) {

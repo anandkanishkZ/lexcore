@@ -4,6 +4,7 @@ import { CreateUserDTO, LoginUserDTO, UpdateUserDTO } from "../dtos/user.dto";
 import { UserService } from "../services/user.service";
 import { toPublicUser, IUser } from "../models/user.model";
 import { ApiResponseHelper } from "../utils/apihelper.util";
+import { handleControllerError } from "../utils/error-handler.util";
 
 const userService = new UserService();
 
@@ -17,7 +18,7 @@ export class UserController {
             const user = await userService.createUser(parsed.data);
             return ApiResponseHelper.success(res, user, "User registered successfully", 201);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "UserController");
         }
     }
 
@@ -30,7 +31,7 @@ export class UserController {
             const result = await userService.loginUser(parsed.data);
             return ApiResponseHelper.success(res, result, "Login successful", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "UserController");
         }
     }
 
@@ -44,7 +45,7 @@ export class UserController {
             const user = req.user as IUser;
             return ApiResponseHelper.success(res, toPublicUser(user), "Current user", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "UserController");
         }
     }
 
@@ -53,7 +54,7 @@ export class UserController {
             const user = req.user as IUser;
             return ApiResponseHelper.success(res, toPublicUser(user), "User detail", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "UserController");
         }
     }
 
@@ -73,7 +74,7 @@ export class UserController {
             const user = await userService.updateUser(userId, updateData);
             return ApiResponseHelper.success(res, user, "Profile updated successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "UserController");
         }
     }
 
@@ -87,7 +88,7 @@ export class UserController {
             const user = await userService.updateProfileImage(userId, imagePath);
             return ApiResponseHelper.success(res, user, "Profile image updated", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "UserController");
         }
     }
 }

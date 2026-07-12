@@ -3,6 +3,7 @@ import { CreateCalendarEventDTO, UpdateCalendarEventDTO } from "../dtos/calendar
 import { CalendarEventService } from "../services/calendar-event.service";
 import { IUser } from "../models/user.model";
 import { ApiResponseHelper } from "../utils/apihelper.util";
+import { handleControllerError } from "../utils/error-handler.util";
 
 const calendarEventService = new CalendarEventService();
 
@@ -15,16 +16,16 @@ export class CalendarEventController {
             const data = await calendarEventService.getAll({ from, to, case: caseId });
             return ApiResponseHelper.success(res, data, "Events fetched successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "CalendarEventController");
         }
     }
 
     async getById(req: Request, res: Response) {
         try {
-            const found = await calendarEventService.getById(req.params.id);
+            const found = await calendarEventService.getById(req.params.id as string);
             return ApiResponseHelper.success(res, found, "Event fetched successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "CalendarEventController");
         }
     }
 
@@ -38,7 +39,7 @@ export class CalendarEventController {
             const created = await calendarEventService.create(parsed.data, userId);
             return ApiResponseHelper.success(res, created, "Event created successfully", 201);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "CalendarEventController");
         }
     }
 
@@ -48,19 +49,19 @@ export class CalendarEventController {
             if (!parsed.success) {
                 return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
             }
-            const updated = await calendarEventService.update(req.params.id, parsed.data);
+            const updated = await calendarEventService.update(req.params.id as string, parsed.data);
             return ApiResponseHelper.success(res, updated, "Event updated successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "CalendarEventController");
         }
     }
 
     async delete(req: Request, res: Response) {
         try {
-            await calendarEventService.delete(req.params.id);
+            await calendarEventService.delete(req.params.id as string);
             return ApiResponseHelper.success(res, null, "Event deleted successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "CalendarEventController");
         }
     }
 }

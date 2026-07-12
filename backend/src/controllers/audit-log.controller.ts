@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { AuditLogService } from "../services/audit-log.service";
 import { ApiResponseHelper } from "../utils/apihelper.util";
+import { handleControllerError } from "../utils/error-handler.util";
 
 const auditLogService = new AuditLogService();
 
@@ -16,7 +17,7 @@ export class AuditLogController {
                 total,
             });
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "AuditLogController");
         }
     }
 }

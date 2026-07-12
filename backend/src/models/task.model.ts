@@ -28,4 +28,8 @@ const TaskMongoSchema = new Schema<ITask>(
     { timestamps: true }
 );
 
+TaskMongoSchema.index({ status: 1 });
+TaskMongoSchema.index({ assignee: 1 });
+TaskMongoSchema.index({ case: 1 });
+
 export const TaskModel = mongoose.model<ITask>("Task", TaskMongoSchema);

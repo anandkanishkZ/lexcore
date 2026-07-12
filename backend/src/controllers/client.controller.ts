@@ -4,6 +4,7 @@ import { ClientService } from "../services/client.service";
 import { IUser } from "../models/user.model";
 import { ApiResponseHelper } from "../utils/apihelper.util";
 import { logAudit } from "../utils/audit-log.util";
+import { handleControllerError } from "../utils/error-handler.util";
 
 const clientService = new ClientService();
 
@@ -22,7 +23,7 @@ export class ClientController {
                 total,
             });
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "ClientController");
         }
     }
 
@@ -32,7 +33,7 @@ export class ClientController {
             const client = await clientService.getById(id);
             return ApiResponseHelper.success(res, client, "Client fetched successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "ClientController");
         }
     }
 
@@ -46,7 +47,7 @@ export class ClientController {
             const client = await clientService.create(parsed.data, userId);
             return ApiResponseHelper.success(res, client, "Client created successfully", 201);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "ClientController");
         }
     }
 
@@ -60,7 +61,7 @@ export class ClientController {
             const client = await clientService.update(id, parsed.data);
             return ApiResponseHelper.success(res, client, "Client updated successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "ClientController");
         }
     }
 
@@ -76,7 +77,7 @@ export class ClientController {
             });
             return ApiResponseHelper.success(res, null, "Client deleted successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "ClientController");
         }
     }
 }

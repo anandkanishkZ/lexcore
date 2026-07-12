@@ -4,6 +4,7 @@ import { DocumentService } from "../services/document.service";
 import { CreateFolderDTO, UpdateFileDTO, UpdateFolderDTO, CopyFileDTO } from "../dtos/document.dto";
 import { IUser } from "../models/user.model";
 import { ApiResponseHelper } from "../utils/apihelper.util";
+import { handleControllerError } from "../utils/error-handler.util";
 import { FileListFilters } from "../repositories/case-file.repository";
 
 const documentService = new DocumentService();
@@ -34,7 +35,7 @@ export class DocumentController {
             const data = await documentService.list(caseId, folder, requestingUser(req), filters);
             return ApiResponseHelper.success(res, data, "Documents fetched successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "DocumentController");
         }
     }
 
@@ -43,7 +44,7 @@ export class DocumentController {
             const files = await documentService.listRecent(requestingUser(req));
             return ApiResponseHelper.success(res, files, "Recent documents fetched successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "DocumentController");
         }
     }
 
@@ -52,7 +53,7 @@ export class DocumentController {
             const data = await documentService.listStarred(requestingUser(req));
             return ApiResponseHelper.success(res, data, "Starred documents fetched successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "DocumentController");
         }
     }
 
@@ -63,7 +64,7 @@ export class DocumentController {
             const data = await documentService.listTrash(caseId, requestingUser(req));
             return ApiResponseHelper.success(res, data, "Trash fetched successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "DocumentController");
         }
     }
 
@@ -75,7 +76,7 @@ export class DocumentController {
             const folders = await documentService.listMoveTargets(caseId, exclude, requestingUser(req));
             return ApiResponseHelper.success(res, folders, "Folders fetched successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "DocumentController");
         }
     }
 
@@ -88,7 +89,7 @@ export class DocumentController {
             const folder = await documentService.createFolder(parsed.data, userId(req), requestingUser(req));
             return ApiResponseHelper.success(res, folder, "Folder created successfully", 201);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "DocumentController");
         }
     }
 
@@ -102,7 +103,7 @@ export class DocumentController {
             const created = await documentService.recordUpload(req.file, caseId, folder, userId(req));
             return ApiResponseHelper.success(res, created, "File uploaded successfully", 201);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "DocumentController");
         }
     }
 
@@ -113,7 +114,7 @@ export class DocumentController {
             res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(file.name)}"`);
             fs.createReadStream(file.storagePath).pipe(res);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "DocumentController");
         }
     }
 
@@ -126,7 +127,7 @@ export class DocumentController {
             const copy = await documentService.copyFile(String(req.params.id), parsed.data.folder, userId(req), requestingUser(req));
             return ApiResponseHelper.success(res, copy, "File copied successfully", 201);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "DocumentController");
         }
     }
 
@@ -139,7 +140,7 @@ export class DocumentController {
             const updated = await documentService.updateFile(String(req.params.id), parsed.data, requestingUser(req));
             return ApiResponseHelper.success(res, updated, "File updated successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "DocumentController");
         }
     }
 
@@ -152,7 +153,7 @@ export class DocumentController {
             const updated = await documentService.updateFolder(String(req.params.id), parsed.data, requestingUser(req));
             return ApiResponseHelper.success(res, updated, "Folder updated successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "DocumentController");
         }
     }
 
@@ -161,7 +162,7 @@ export class DocumentController {
             const restored = await documentService.restoreFile(String(req.params.id), requestingUser(req));
             return ApiResponseHelper.success(res, restored, "File restored successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "DocumentController");
         }
     }
 
@@ -170,7 +171,7 @@ export class DocumentController {
             const restored = await documentService.restoreFolder(String(req.params.id), requestingUser(req));
             return ApiResponseHelper.success(res, restored, "Folder restored successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "DocumentController");
         }
     }
 
@@ -179,7 +180,7 @@ export class DocumentController {
             await documentService.trashFile(String(req.params.id), requestingUser(req));
             return ApiResponseHelper.success(res, null, "File moved to trash", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "DocumentController");
         }
     }
 
@@ -188,7 +189,7 @@ export class DocumentController {
             await documentService.trashFolder(String(req.params.id), requestingUser(req));
             return ApiResponseHelper.success(res, null, "Folder moved to trash", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "DocumentController");
         }
     }
 
@@ -197,7 +198,7 @@ export class DocumentController {
             await documentService.permanentlyDeleteFile(String(req.params.id), requestingUser(req));
             return ApiResponseHelper.success(res, null, "File permanently deleted", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "DocumentController");
         }
     }
 
@@ -206,7 +207,7 @@ export class DocumentController {
             await documentService.permanentlyDeleteFolder(String(req.params.id), requestingUser(req));
             return ApiResponseHelper.success(res, null, "Folder permanently deleted", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "DocumentController");
         }
     }
 }

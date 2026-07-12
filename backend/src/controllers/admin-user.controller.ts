@@ -5,6 +5,7 @@ import { IUser } from "../models/user.model";
 import { ApiResponseHelper } from "../utils/apihelper.util";
 import { HttpException } from "../exceptions/http-exception";
 import { logAudit } from "../utils/audit-log.util";
+import { handleControllerError } from "../utils/error-handler.util";
 
 const userService = new UserService();
 
@@ -23,7 +24,7 @@ export class AdminUserController {
                 total,
             });
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "AdminUserController");
         }
     }
 
@@ -32,7 +33,7 @@ export class AdminUserController {
             const user = await userService.getById(req.params.id as string);
             return ApiResponseHelper.success(res, user, "User fetched successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "AdminUserController");
         }
     }
 
@@ -45,7 +46,7 @@ export class AdminUserController {
             const user = await userService.adminCreateUser(parsed.data);
             return ApiResponseHelper.success(res, user, "User created successfully", 201);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "AdminUserController");
         }
     }
 
@@ -67,7 +68,7 @@ export class AdminUserController {
             }
             return ApiResponseHelper.success(res, user, "User updated successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "AdminUserController");
         }
     }
 
@@ -87,7 +88,7 @@ export class AdminUserController {
             });
             return ApiResponseHelper.success(res, null, "User deleted successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "AdminUserController");
         }
     }
 }

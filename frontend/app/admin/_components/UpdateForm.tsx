@@ -99,8 +99,15 @@ export default function UpdateForm({ user }: UpdateFormProps) {
         ? `${API_URL}${user.profileImage}`
         : null;
 
+    // react-hook-form's handleSubmit closure calls clearImage() (which reads
+    // fileInputRef.current) on success — that only ever runs from the form's
+    // submit event, never during render, but the compiler's static analysis
+    // can't prove that and flags it as a possible ref-during-render read.
+    // eslint-disable-next-line react-hooks/refs
+    const onFormSubmit = handleSubmit(onSubmit);
+
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={onFormSubmit} className="space-y-6">
             {error && (
                 <p className="text-sm text-red-500 text-center border border-red-200 bg-red-50 rounded-lg px-3 py-2">
                     {error}

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { MemberService } from "../services/member.service";
 import { ApiResponseHelper } from "../utils/apihelper.util";
+import { handleControllerError } from "../utils/error-handler.util";
 
 const memberService = new MemberService();
 
@@ -19,7 +20,7 @@ export class MemberController {
                 total,
             });
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "MemberController");
         }
     }
 }

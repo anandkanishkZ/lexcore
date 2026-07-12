@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { UpdateFirmSettingsDTO } from "../dtos/firm-settings.dto";
 import { FirmSettingsService } from "../services/firm-settings.service";
 import { ApiResponseHelper } from "../utils/apihelper.util";
+import { handleControllerError } from "../utils/error-handler.util";
 
 const firmSettingsService = new FirmSettingsService();
 
@@ -11,7 +12,7 @@ export class FirmSettingsController {
             const settings = await firmSettingsService.get();
             return ApiResponseHelper.success(res, settings, "Firm settings fetched successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "FirmSettingsController");
         }
     }
 
@@ -24,7 +25,7 @@ export class FirmSettingsController {
             const updated = await firmSettingsService.update(parsed.data);
             return ApiResponseHelper.success(res, updated, "Firm settings updated successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "FirmSettingsController");
         }
     }
 }

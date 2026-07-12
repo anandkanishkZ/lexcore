@@ -3,6 +3,7 @@ import { CreateCaseRequestDTO, ApproveCaseRequestDTO, RejectCaseRequestDTO } fro
 import { CaseRequestService } from "../services/case-request.service";
 import { IUser } from "../models/user.model";
 import { ApiResponseHelper } from "../utils/apihelper.util";
+import { handleControllerError } from "../utils/error-handler.util";
 
 const caseRequestService = new CaseRequestService();
 
@@ -17,7 +18,7 @@ export class CaseRequestController {
             const created = await caseRequestService.create(parsed.data, userId);
             return ApiResponseHelper.success(res, created, "Request submitted successfully", 201);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "CaseRequestController");
         }
     }
 
@@ -27,7 +28,7 @@ export class CaseRequestController {
             const data = await caseRequestService.getMine(userId);
             return ApiResponseHelper.success(res, data, "My case requests fetched successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "CaseRequestController");
         }
     }
 
@@ -37,16 +38,16 @@ export class CaseRequestController {
             const data = await caseRequestService.getAll(status);
             return ApiResponseHelper.success(res, data, "Case requests fetched successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "CaseRequestController");
         }
     }
 
     async getById(req: Request, res: Response) {
         try {
-            const found = await caseRequestService.getById(req.params.id);
+            const found = await caseRequestService.getById(req.params.id as string);
             return ApiResponseHelper.success(res, found, "Case request fetched successfully", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "CaseRequestController");
         }
     }
 
@@ -57,10 +58,10 @@ export class CaseRequestController {
                 return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
             }
             const staffUserId = (req.user as IUser)._id.toString();
-            const updated = await caseRequestService.approve(req.params.id, staffUserId, parsed.data);
+            const updated = await caseRequestService.approve(req.params.id as string, staffUserId, parsed.data);
             return ApiResponseHelper.success(res, updated, "Case request approved", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "CaseRequestController");
         }
     }
 
@@ -71,10 +72,10 @@ export class CaseRequestController {
                 return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
             }
             const staffUserId = (req.user as IUser)._id.toString();
-            const updated = await caseRequestService.reject(req.params.id, staffUserId, parsed.data);
+            const updated = await caseRequestService.reject(req.params.id as string, staffUserId, parsed.data);
             return ApiResponseHelper.success(res, updated, "Case request rejected", 200);
         } catch (error: any) {
-            return ApiResponseHelper.error(res, error.message || "Internal Server Error", error.status || 500);
+            return handleControllerError(res, error, "CaseRequestController");
         }
     }
 }
