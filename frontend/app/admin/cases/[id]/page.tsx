@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { fetchCaseAction } from "@/lib/actions/case";
 import DocumentsPanel from "./_components/DocumentsPanel";
 import DocumentRequestsPanel from "./_components/DocumentRequestsPanel";
+import MessagesPanel from "./_components/MessagesPanel";
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -37,7 +38,14 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 export default async function CaseDetailPage({ params, searchParams }: PageProps) {
     const { id } = await params;
     const { tab: tabParam, folder, view, layout, search, type, sortBy, sortOrder } = await searchParams;
-    const tab = tabParam === "documents" ? "documents" : tabParam === "requests" ? "requests" : "details";
+    const tab =
+        tabParam === "documents"
+            ? "documents"
+            : tabParam === "requests"
+              ? "requests"
+              : tabParam === "messages"
+                ? "messages"
+                : "details";
     const result = await fetchCaseAction(id);
 
     if (!result.success) {
@@ -47,7 +55,7 @@ export default async function CaseDetailPage({ params, searchParams }: PageProps
     const c = result.data;
 
     return (
-        <div className={tab === "documents" || tab === "requests" ? "max-w-5xl" : "max-w-2xl"}>
+        <div className={tab === "documents" || tab === "requests" || tab === "messages" ? "max-w-5xl" : "max-w-2xl"}>
             <div className="flex items-center justify-between mb-6">
                 <div>
                     <h1 className="text-2xl font-semibold text-slate-900">{c.title}</h1>
@@ -94,6 +102,14 @@ export default async function CaseDetailPage({ params, searchParams }: PageProps
                 >
                     Requests
                 </Link>
+                <Link
+                    href={`/admin/cases/${id}?tab=messages`}
+                    className={`rounded-md px-4 py-1.5 text-xs font-medium transition ${
+                        tab === "messages" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                    }`}
+                >
+                    Messages
+                </Link>
             </div>
 
             {tab === "documents" ? (
@@ -109,6 +125,8 @@ export default async function CaseDetailPage({ params, searchParams }: PageProps
                 />
             ) : tab === "requests" ? (
                 <DocumentRequestsPanel caseId={id} />
+            ) : tab === "messages" ? (
+                <MessagesPanel caseId={id} />
             ) : (
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
                 {/* Status + Type row */}

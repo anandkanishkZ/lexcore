@@ -63,6 +63,31 @@ export class CaseService {
         return found;
     }
 
+    /**
+     * Who may join/use a case's chat thread (Module 15): admins, the case's
+     * client (by email, same rule as assertAccess), OR the case's
+     * assignedAttorney (by user id, same rule update() already uses for
+     * non-admin edit access). Deliberately a separate method rather than
+     * broadening assertAccess itself — assertAccess is relied on elsewhere
+     * (e.g. DocumentService) with its narrower admin-or-client-only meaning,
+     * and chat is the first feature where "the assigned staff member, not
+     * just any staff" needs to be let in too.
+     */
+    async assertChatAccess(id: string, requestingUser: { role: string; email: string; userId: string }): Promise<ICase> {
+        const found = await caseRepository.getById(id);
+        if (!found) throw new HttpException(404, "Case not found");
+
+        if (requestingUser.role === "admin") return found;
+
+        const client = found.client as unknown as { email?: string } | null;
+        if (client && client.email === requestingUser.email) return found;
+
+        const assignedAttorney = found.assignedAttorney as unknown as { _id?: { toString(): string } } | null;
+        if (assignedAttorney?._id?.toString() === requestingUser.userId) return found;
+
+        throw new HttpException(403, "Access denied");
+    }
+
     async create(data: CreateCaseDTO, userId: string): Promise<ICase> {
         if (data.assignedAttorney) await this.assertValidAttorney(data.assignedAttorney);
 
