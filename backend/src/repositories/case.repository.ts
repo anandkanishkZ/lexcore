@@ -41,7 +41,7 @@ export class CaseMongoRepository {
 
     async getById(id: string): Promise<ICase | null> {
         return CaseModel.findById(id)
-            .populate("client", "firstName lastName email phone type")
+            .populate("client", "firstName lastName email phone type linkedUserId")
             .populate("assignedAttorney", "firstName lastName email userType")
             .populate("createdBy", "firstName lastName email");
     }

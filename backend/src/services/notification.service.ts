@@ -45,4 +45,21 @@ export class NotificationService {
         const admins = await UserModel.find({ role: "admin" }, "email");
         await Promise.all(admins.map((admin) => sendMail(admin.email, subject, text)));
     }
+
+    /**
+     * In-app notification for a single specific user — e.g. a client whose
+     * portal account (Client.linkedUserId) exists. Distinct from
+     * notifyAdmins, which broadcasts to every admin.
+     */
+    async notifyUser(userId: string, title: string, message: string, linkedEntity?: { type: string; id: string }): Promise<void> {
+        await notificationRepository.createMany([
+            {
+                user: userId as any,
+                title,
+                message,
+                linkedEntityType: linkedEntity?.type,
+                linkedEntityId: linkedEntity?.id,
+            },
+        ]);
+    }
 }
