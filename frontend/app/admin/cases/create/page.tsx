@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { fetchClientsAction } from "@/lib/actions/client";
 import { fetchMembersAction } from "@/lib/actions/member";
+import { toStaffOptions } from "@/lib/api/member";
 import CaseForm from "../_components/CaseForm";
 
 export default async function CreateCasePage() {
@@ -20,15 +21,7 @@ export default async function CreateCasePage() {
         email: c.email,
     }));
 
-    // Filter to non-client user types eligible as attorneys
-    const attorneys = (membersResult.data ?? [])
-        .filter((u: any) => u.userType !== "client")
-        .map((u: any) => ({
-            _id: u._id,
-            firstName: u.firstName,
-            lastName: u.lastName,
-            userType: u.userType,
-        }));
+    const attorneys = toStaffOptions(membersResult.data ?? []);
 
     return (
         <div className="max-w-2xl">

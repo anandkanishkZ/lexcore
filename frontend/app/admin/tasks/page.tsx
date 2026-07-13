@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { fetchTasksAction } from "@/lib/actions/task";
 import { fetchMembersAction } from "@/lib/actions/member";
+import { toStaffOptions } from "@/lib/api/member";
 import { fetchCasesAction } from "@/lib/actions/case";
 import TasksPageClient from "./_components/TasksPageClient";
 
@@ -16,11 +17,7 @@ export default async function TasksPage() {
     }
 
     const tasks = tasksResult.data ?? [];
-    const members = (membersResult.data ?? []).map((m: any) => ({
-        _id: m._id,
-        firstName: m.firstName,
-        lastName: m.lastName,
-    }));
+    const members = toStaffOptions(membersResult.data ?? []);
     const cases = (casesResult.data ?? []).map((c: any) => ({
         _id: c._id,
         title: c.title,

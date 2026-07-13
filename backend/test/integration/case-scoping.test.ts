@@ -104,4 +104,42 @@ describe("case-level assignedAttorney scoping", () => {
         const res = await request(app).delete(`/api/v1/cases/${caseId}`).set("Authorization", `Bearer ${adminToken}`);
         expect(res.status).toBe(200);
     });
+
+    it("rejects assigning a client as a case's attorney on create", async () => {
+        const { token: adminToken } = await createUserAndToken({ role: "admin" });
+        const { user: clientUser } = await createUserAndToken({ userType: "client", role: "user" });
+        const client = await makeClientRecord();
+
+        const res = await request(app)
+            .post("/api/v1/cases")
+            .set("Authorization", `Bearer ${adminToken}`)
+            .send({
+                title: "Bad Attorney Assignment",
+                type: "civil",
+                status: "open",
+                client: client._id.toString(),
+                assignedAttorney: clientUser._id.toString(),
+            });
+
+        expect(res.status).toBe(400);
+    });
+
+    it("rejects assigning a client as a case's attorney on update", async () => {
+        const { token: adminToken } = await createUserAndToken({ role: "admin" });
+        const { user: clientUser } = await createUserAndToken({ userType: "client", role: "user" });
+        const client = await makeClientRecord();
+
+        const created = await request(app)
+            .post("/api/v1/cases")
+            .set("Authorization", `Bearer ${adminToken}`)
+            .send({ title: "Reassign Test", type: "civil", status: "open", client: client._id.toString() });
+        const caseId = created.body.data._id;
+
+        const res = await request(app)
+            .put(`/api/v1/cases/${caseId}`)
+            .set("Authorization", `Bearer ${adminToken}`)
+            .send({ assignedAttorney: clientUser._id.toString() });
+
+        expect(res.status).toBe(400);
+    });
 });

@@ -1,12 +1,30 @@
 import { CaseMongoRepository, CaseQuery } from "../repositories/case.repository";
+import { UserMongoRepository } from "../repositories/user.repository";
 import { CreateCaseDTO, UpdateCaseDTO } from "../dtos/case.dto";
 import { ICase } from "../models/case.model";
 import { HttpException } from "../exceptions/http-exception";
 import { logAudit } from "../utils/audit-log.util";
 
 const caseRepository = new CaseMongoRepository();
+const userRepository = new UserMongoRepository();
 
 export class CaseService {
+    /**
+     * A case's assignedAttorney must be a staff account (any non-client
+     * userType), never a client — a client requesting their own case can
+     * otherwise end up listed as its own assignable "attorney" wherever the
+     * caller's list of candidates isn't already staff-only (e.g. a stale UI,
+     * or a direct API call). Shared by create/update so every entry point
+     * that can set assignedAttorney enforces this the same way.
+     */
+    private async assertValidAttorney(attorneyId: string): Promise<void> {
+        const user = await userRepository.getUserById(attorneyId);
+        if (!user) throw new HttpException(404, "Assigned attorney not found");
+        if (user.userType === "client") {
+            throw new HttpException(400, "A client cannot be assigned as the attorney on a case");
+        }
+    }
+
     async getAll(query: CaseQuery): Promise<{ data: ICase[]; total: number }> {
         return caseRepository.getAll(query);
     }
@@ -46,6 +64,8 @@ export class CaseService {
     }
 
     async create(data: CreateCaseDTO, userId: string): Promise<ICase> {
+        if (data.assignedAttorney) await this.assertValidAttorney(data.assignedAttorney);
+
         const total = await caseRepository.countAll();
         const year = new Date().getFullYear();
         const caseNumber = `CASE-${year}-${String(total + 1).padStart(4, "0")}`;
@@ -82,6 +102,8 @@ export class CaseService {
                 throw new HttpException(403, "You can only edit cases assigned to you");
             }
         }
+
+        if (data.assignedAttorney) await this.assertValidAttorney(data.assignedAttorney);
 
         const updatePayload: any = { ...data };
         if (data.client) updatePayload.client = data.client;

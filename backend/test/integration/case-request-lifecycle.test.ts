@@ -37,6 +37,7 @@ describe("case request lifecycle (submit -> approve/reject)", () => {
         const client = await ClientModel.findOne({ email: clientUser.email });
         expect(client).not.toBeNull();
         expect(client!.phone).toBe("9800000000");
+        expect(client!.linkedUserId?.toString()).toBe(clientUser._id.toString());
 
         const createdCase = await CaseModel.findById(approved.body.data.resultingCase._id);
         expect(createdCase).not.toBeNull();
@@ -78,6 +79,13 @@ describe("case request lifecycle (submit -> approve/reject)", () => {
 
         const createdCase = await CaseModel.findById(approved.body.data.resultingCase._id);
         expect(createdCase!.client.toString()).toBe(existing._id.toString());
+
+        // The pre-existing Client record had no linkedUserId (it predates
+        // that field, or was hand-created by an admin) — approval must
+        // backfill it rather than leaving the requester and this contact as
+        // two permanently-unrelated rows in the members directory.
+        const reloaded = await ClientModel.findById(existing._id);
+        expect(reloaded!.linkedUserId?.toString()).toBe(clientUser._id.toString());
     });
 
     it("rejects a request with a reason and does not create a case", async () => {

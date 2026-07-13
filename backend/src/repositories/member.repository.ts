@@ -13,16 +13,42 @@ export interface Member {
     lastName: string;
     email: string;
     phone: string | null;
-    category: "staff" | "client";
+    /**
+     * Which collection this row's *displayed* data came from — `"account"`
+     * (a User login with no linked CRM contact) or `"contact"` (a Client CRM
+     * record — shown even if that person also has a login, see
+     * [hasPortalAccess]). NOT a permission signal — use [isStaff] for that.
+     */
+    source: "account" | "contact";
+    /**
+     * The one authoritative "can this person be assigned staff-only work"
+     * fact, computed server-side from the real User.role/userType — never
+     * inferred from [source]. Always `false` for `source: "contact"` rows
+     * (a CRM contact, even a linked one, was never staff).
+     */
+    isStaff: boolean;
+    /**
+     * Whether this person can sign in — true for every `source: "account"`
+     * row (that's what it is) and for a `source: "contact"` row whose Client
+     * has a `linkedUserId`. False only for a CRM-only contact who has never
+     * logged in.
+     */
+    hasPortalAccess: boolean;
     subtype: string;
     status: string | null;
     createdAt: Date;
 }
 
 /**
- * Merges the Client (CRM) and User (staff login) collections into one
- * sorted, searched, and paginated result set using $unionWith — so paging
- * is correct at the database level instead of capping a client-side fetch.
+ * Merges the Client (CRM) and User (login) collections into one sorted,
+ * searched, paginated directory using $unionWith — so paging is correct at
+ * the database level instead of capping a client-side fetch.
+ *
+ * A person who is both (a Client contact whose `linkedUserId` points at a
+ * User login — see CaseRequestService.approve, which sets this link) is
+ * shown as ONE row, sourced from their richer Client record, rather than
+ * two unrelated rows for the same human. The User side excludes any account
+ * already represented by a linked Client row via a $lookup + $match.
  */
 export class MemberMongoRepository {
     async getAll(query: MemberQuery): Promise<{ data: Member[]; total: number }> {
@@ -46,7 +72,9 @@ export class MemberMongoRepository {
                     lastName: 1,
                     email: 1,
                     phone: 1,
-                    category: { $literal: "client" },
+                    source: { $literal: "contact" },
+                    isStaff: { $literal: false },
+                    hasPortalAccess: { $ne: [{ $ifNull: ["$linkedUserId", null] }, null] },
                     subtype: "$type",
                     status: "$status",
                     createdAt: 1,
@@ -57,12 +85,30 @@ export class MemberMongoRepository {
                     coll: UserModel.collection.name,
                     pipeline: [
                         {
+                            $lookup: {
+                                from: ClientModel.collection.name,
+                                localField: "_id",
+                                foreignField: "linkedUserId",
+                                as: "_linkedContact",
+                            },
+                        },
+                        // Already shown via its linked Client row above — skip
+                        // the duplicate account-only row for the same person.
+                        { $match: { _linkedContact: { $size: 0 } } },
+                        {
                             $project: {
                                 firstName: 1,
                                 lastName: 1,
                                 email: 1,
                                 phone: { $literal: null },
-                                category: { $literal: "staff" },
+                                source: { $literal: "account" },
+                                // Mirrors staffMiddleware's rule exactly: admin, or any
+                                // non-client userType. A client's own login row must
+                                // never evaluate to true here.
+                                isStaff: {
+                                    $or: [{ $eq: ["$role", "admin"] }, { $ne: ["$userType", "client"] }],
+                                },
+                                hasPortalAccess: { $literal: true },
                                 subtype: {
                                     $cond: [{ $eq: ["$role", "admin"] }, "admin", "$userType"],
                                 },

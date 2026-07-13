@@ -1,11 +1,23 @@
 import { TaskMongoRepository, TaskQuery } from "../repositories/task.repository";
+import { UserMongoRepository } from "../repositories/user.repository";
 import { CreateTaskDTO, UpdateTaskDTO } from "../dtos/task.dto";
 import { ITask } from "../models/task.model";
 import { HttpException } from "../exceptions/http-exception";
 
 const taskRepository = new TaskMongoRepository();
+const userRepository = new UserMongoRepository();
 
 export class TaskService {
+    /** A task's assignee must be a staff account, never a client — mirrors
+     * CaseService.assertValidAttorney. */
+    private async assertValidAssignee(assigneeId: string): Promise<void> {
+        const user = await userRepository.getUserById(assigneeId);
+        if (!user) throw new HttpException(404, "Assignee not found");
+        if (user.userType === "client") {
+            throw new HttpException(400, "A client cannot be assigned a task");
+        }
+    }
+
     async getAll(query: TaskQuery): Promise<ITask[]> {
         return taskRepository.getAll(query);
     }
@@ -17,6 +29,8 @@ export class TaskService {
     }
 
     async create(data: CreateTaskDTO, userId: string): Promise<ITask> {
+        if (data.assignee) await this.assertValidAssignee(data.assignee);
+
         return taskRepository.create({
             title: data.title,
             description: data.description ?? "",
@@ -32,6 +46,8 @@ export class TaskService {
     async update(id: string, data: UpdateTaskDTO): Promise<ITask> {
         const existing = await taskRepository.getById(id);
         if (!existing) throw new HttpException(404, "Task not found");
+
+        if (data.assignee) await this.assertValidAssignee(data.assignee);
 
         const updatePayload: any = { ...data };
         if (data.dueDate) updatePayload.dueDate = new Date(data.dueDate);

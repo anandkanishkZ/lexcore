@@ -81,7 +81,15 @@ export class CaseRequestService {
                 type: "individual",
                 status: "active",
                 createdBy: staffUserId,
+                linkedUserId: requester._id,
             });
+        } else if (!client.linkedUserId) {
+            // Pre-existing Client record from before linkedUserId existed, or
+            // one an admin created by hand before this requester ever logged
+            // in — link it now rather than leaving requester and contact as
+            // two permanently-unrelated rows in the members directory.
+            client.linkedUserId = requester._id as any;
+            await client.save();
         }
 
         const createdCase = await caseService.create(

@@ -15,14 +15,18 @@ export interface Member {
     lastName: string;
     email: string;
     phone: string | null;
-    category: "staff" | "client";
+    // Which record this row's data came from — NOT a permission signal.
+    // See `isStaff` for staff/client, `hasPortalAccess` for can-they-log-in.
+    source: "account" | "contact";
+    isStaff: boolean;
+    hasPortalAccess: boolean;
     subtype: string;
     status: string | null;
     createdAt: string;
 }
 
 function detailHref(m: Member) {
-    return m.category === "client" ? `/admin/clients/${m._id}` : undefined;
+    return m.source === "contact" ? `/admin/clients/${m._id}` : undefined;
 }
 
 function formatDate(value: string) {
@@ -81,8 +85,8 @@ export default function UsersTable({ members }: { members: Member[] }) {
                             <th className="text-left py-3 px-4 font-medium text-slate-500">Name</th>
                             <th className="text-left py-3 px-4 font-medium text-slate-500">Email</th>
                             <th className="text-left py-3 px-4 font-medium text-slate-500">Phone</th>
-                            <th className="text-left py-3 px-4 font-medium text-slate-500">Category</th>
-                            <th className="text-left py-3 px-4 font-medium text-slate-500">Type</th>
+                            <th className="text-left py-3 px-4 font-medium text-slate-500">Account</th>
+                            <th className="text-left py-3 px-4 font-medium text-slate-500">Role</th>
                             <th className="text-left py-3 px-4 font-medium text-slate-500">Status</th>
                             <th className="text-left py-3 px-4 font-medium text-slate-500">Joined</th>
                             <th className="text-right py-3 px-4 font-medium text-slate-500">Actions</th>
@@ -93,7 +97,7 @@ export default function UsersTable({ members }: { members: Member[] }) {
                             const href = detailHref(m);
                             return (
                                 <tr
-                                    key={`${m.category}-${m._id}`}
+                                    key={`${m.source}-${m._id}`}
                                     className="border-b border-slate-100 hover:bg-slate-50 transition"
                                 >
                                     <td className="py-3 px-4">
@@ -112,15 +116,21 @@ export default function UsersTable({ members }: { members: Member[] }) {
                                     <td className="py-3 px-4 text-slate-600">{m.email}</td>
                                     <td className="py-3 px-4 text-slate-600">{m.phone || "—"}</td>
                                     <td className="py-3 px-4">
-                                        {m.category === "staff" ? (
-                                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs rounded-full bg-indigo-50 text-indigo-700">
+                                        {m.hasPortalAccess ? (
+                                            <span
+                                                title="Can sign in to Lexcore"
+                                                className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs rounded-full bg-indigo-50 text-indigo-700"
+                                            >
                                                 <ShieldCheck className="w-3 h-3" />
-                                                Staff
+                                                Portal login
                                             </span>
                                         ) : (
-                                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs rounded-full bg-sky-50 text-sky-700">
+                                            <span
+                                                title="CRM contact only — no login"
+                                                className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-500"
+                                            >
                                                 <UsersIcon className="w-3 h-3" />
-                                                Client
+                                                Contact only
                                             </span>
                                         )}
                                     </td>

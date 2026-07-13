@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { AlertCircle, Inbox } from "lucide-react";
 import { fetchCaseRequestsAction } from "@/lib/actions/case-request";
 import { fetchMembersAction } from "@/lib/actions/member";
+import { toStaffOptions } from "@/lib/api/member";
 import CaseRequestsTable from "./_components/CaseRequestsTable";
 
 interface PageProps {
@@ -29,14 +30,7 @@ export default async function CaseRequestsPage({ searchParams }: PageProps) {
     }
 
     const requests: any[] = requestsResult.data || [];
-    const attorneys = (membersResult.data ?? [])
-        .filter((u: any) => u.userType !== "client")
-        .map((u: any) => ({
-            _id: u._id,
-            firstName: u.firstName,
-            lastName: u.lastName,
-            userType: u.userType,
-        }));
+    const attorneys = toStaffOptions(membersResult.data ?? []);
 
     return (
         <div>

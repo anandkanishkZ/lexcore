@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { fetchCaseAction } from "@/lib/actions/case";
 import { fetchClientsAction } from "@/lib/actions/client";
 import { fetchMembersAction } from "@/lib/actions/member";
+import { toStaffOptions } from "@/lib/api/member";
 import CaseForm from "../../_components/CaseForm";
 
 interface PageProps {
@@ -30,14 +31,7 @@ export default async function EditCasePage({ params }: PageProps) {
         email: cl.email,
     }));
 
-    const attorneys = (membersResult.data ?? [])
-        .filter((u: any) => u.userType !== "client")
-        .map((u: any) => ({
-            _id: u._id,
-            firstName: u.firstName,
-            lastName: u.lastName,
-            userType: u.userType,
-        }));
+    const attorneys = toStaffOptions(membersResult.data ?? []);
 
     // Convert ISO dates to YYYY-MM-DD for date input defaultValues
     const toDateInput = (iso: string | undefined) =>
