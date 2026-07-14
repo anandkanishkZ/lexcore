@@ -20,6 +20,7 @@ import invoiceRouter from "./routes/invoice.route";
 import documentRequestRouter from "./routes/document-request.route";
 import messageRouter from "./routes/message.route";
 import aiRouter from "./routes/ai.route";
+import reportRouter from "./routes/report.route";
 import { HttpException } from "./exceptions/http-exception";
 import { ApiResponseHelper } from "./utils/apihelper.util";
 import { UPLOAD_DIR } from "./middlewares/upload.middleware";
@@ -62,6 +63,7 @@ app.use("/api/v1/invoices", invoiceRouter);
 app.use("/api/v1/document-requests", documentRequestRouter);
 app.use("/api/v1/messages", messageRouter);
 app.use("/api/v1/ai", aiRouter);
+app.use("/api/v1/reports", reportRouter);
 
 app.use((req: Request, res: Response) => {
     ApiResponseHelper.error(res, "API not found", 404);
