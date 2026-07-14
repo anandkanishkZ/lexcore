@@ -13,6 +13,10 @@ export default defineConfig({
         env: {
             SECRET_KEY: "test-secret-key-not-for-production",
             CORS_ORIGIN: "http://localhost:3000",
+            // Explicitly unset (not just absent) so the AI "not configured"
+            // tests are hermetic regardless of what's in the real .env —
+            // dotenv.config() never overrides an already-set process.env value.
+            DEEPSEEK_API_KEY: "",
         },
     },
 });

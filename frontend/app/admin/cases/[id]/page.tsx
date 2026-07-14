@@ -4,6 +4,7 @@ import { fetchCaseAction } from "@/lib/actions/case";
 import DocumentsPanel from "./_components/DocumentsPanel";
 import DocumentRequestsPanel from "./_components/DocumentRequestsPanel";
 import MessagesPanel from "./_components/MessagesPanel";
+import CaseSummaryPanel from "./_components/CaseSummaryPanel";
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -210,6 +211,8 @@ export default async function CaseDetailPage({ params, searchParams }: PageProps
                             : "—"}
                     </Field>
                 </div>
+
+                <CaseSummaryPanel caseId={id} />
             </div>
             )}
         </div>

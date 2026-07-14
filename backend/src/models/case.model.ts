@@ -46,4 +46,7 @@ const CaseMongoSchema = new Schema<ICase>(
 CaseMongoSchema.index({ status: 1 });
 CaseMongoSchema.index({ client: 1 });
 
+// Keyword search over title + description for the AI search feature.
+CaseMongoSchema.index({ title: "text", description: "text" });
+
 export const CaseModel = mongoose.model<ICase>("Case", CaseMongoSchema);

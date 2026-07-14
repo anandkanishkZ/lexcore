@@ -9,6 +9,7 @@ import {
     Settings,
     ListChecks,
     ShieldCheck,
+    Sparkles,
     type LucideIcon,
 } from "lucide-react";
 
@@ -48,6 +49,7 @@ export const navSections: NavSection[] = [
             { label: "Tasks", href: "/admin/tasks", icon: ListChecks },
             { label: "Calendar", href: "/admin/calendar", icon: CalendarDays },
             { label: "Billing", href: "/admin/billing", icon: Receipt },
+            { label: "AI Search", href: "/admin/ai", icon: Sparkles },
         ],
     },
     {
@@ -77,6 +79,7 @@ export function getPageTitle(pathname: string): string {
     if (pathname === "/admin/billing") return "Billing";
     if (pathname === "/admin/billing/create") return "New Invoice";
     if (pathname.match(/^\/admin\/billing\/[^/]+$/)) return "Invoice Details";
+    if (pathname === "/admin/ai") return "AI Search";
     if (pathname === "/admin/settings") return "Firm Settings";
     if (pathname === "/admin/audit-log") return "Audit Log";
     if (pathname === "/admin/profile") return "Profile Settings";

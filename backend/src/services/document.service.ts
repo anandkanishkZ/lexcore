@@ -7,6 +7,7 @@ import { HttpException } from "../exceptions/http-exception";
 import { ICaseFolder } from "../models/case-folder.model";
 import { ICaseFile } from "../models/case-file.model";
 import { CreateFolderDTO } from "../dtos/document.dto";
+import { extractTextSafely } from "../utils/text-extraction.util";
 
 type RequestingUser = { role: string; email: string };
 
@@ -64,6 +65,7 @@ export class DocumentService {
     ): Promise<ICaseFile> {
         // Ownership is already enforced by requireCaseQueryAccess before multer
         // ever touches disk (see document.route.ts) — no re-check needed here.
+        const extractedText = await extractTextSafely(file.path, file.mimetype);
         return fileRepository.create({
             name: file.originalname,
             case: caseId,
@@ -72,6 +74,7 @@ export class DocumentService {
             size: file.size,
             storagePath: file.path,
             uploadedBy: userId,
+            extractedText,
         });
     }
 

@@ -74,4 +74,12 @@ export class CaseMongoRepository {
             .populate("createdBy", "firstName lastName")
             .sort({ createdAt: -1 });
     }
+
+    /** Keyword search over title + description (AI search feature). */
+    async searchText(query: string, limit: number): Promise<ICase[]> {
+        return CaseModel.find({ $text: { $search: query } }, { score: { $meta: "textScore" } })
+            .populate("client", "firstName lastName email")
+            .sort({ score: { $meta: "textScore" } })
+            .limit(limit);
+    }
 }

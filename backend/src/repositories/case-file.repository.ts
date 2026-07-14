@@ -99,6 +99,25 @@ export class CaseFileMongoRepository {
         return CaseFileModel.findById(id);
     }
 
+    /** Every non-trashed file in one case — used by AiService.summarizeCase to
+     * assemble the case's documents' extractedText. */
+    async listAllByCase(caseId: string, limit: number): Promise<ICaseFile[]> {
+        return CaseFileModel.find({ case: caseId, isDeleted: { $ne: true } })
+            .sort({ createdAt: -1 })
+            .limit(limit);
+    }
+
+    /** Keyword search over filename + extracted content (AI search feature). */
+    async searchText(query: string, limit: number): Promise<ICaseFile[]> {
+        return CaseFileModel.find(
+            { $text: { $search: query }, isDeleted: { $ne: true } },
+            { score: { $meta: "textScore" } }
+        )
+            .populate("case", "title caseNumber")
+            .sort({ score: { $meta: "textScore" } })
+            .limit(limit);
+    }
+
     async create(data: {
         name: string;
         case: string;
@@ -107,6 +126,7 @@ export class CaseFileMongoRepository {
         size: number;
         storagePath: string;
         uploadedBy: string;
+        extractedText?: string;
     }): Promise<ICaseFile> {
         return CaseFileModel.create(data);
     }

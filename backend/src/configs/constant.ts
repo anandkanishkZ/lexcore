@@ -24,3 +24,8 @@ export const SMTP_PORT: number = Number(process.env.SMTP_PORT) || 587;
 export const SMTP_USER: string | undefined = process.env.SMTP_USER || undefined;
 export const SMTP_PASS: string | undefined = process.env.SMTP_PASS || undefined;
 export const SMTP_FROM: string = process.env.SMTP_FROM || "Lexcore <no-reply@lexcore.local>";
+
+// Optional, like the SMTP_* vars above — the AI search/summarize feature
+// degrades gracefully (503 "not configured") rather than failing startup
+// when this is unset.
+export const DEEPSEEK_API_KEY: string | undefined = process.env.DEEPSEEK_API_KEY || undefined;

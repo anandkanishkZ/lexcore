@@ -6,6 +6,8 @@ import { connectToMongoDB } from "./src/database/mongodb";
 import { CORS_ORIGINS } from "./src/configs/constant";
 import { setIo } from "./src/socket/io-instance";
 import { initChatGateway } from "./src/socket/chat.gateway";
+import { CaseModel } from "./src/models/case.model";
+import { CaseFileModel } from "./src/models/case-file.model";
 
 process.on("unhandledRejection", (reason) => {
     console.error("Unhandled promise rejection:", reason);
@@ -18,6 +20,10 @@ process.on("uncaughtException", (error) => {
 async function start() {
     try {
         await connectToMongoDB();
+        // $text queries (AI search) require the index to already exist —
+        // ensure it's built before the server starts accepting requests,
+        // rather than racing background index creation on a fresh database.
+        await Promise.all([CaseModel.init(), CaseFileModel.init()]);
     } catch (error) {
         console.error("Fatal: could not connect to MongoDB, exiting.", error);
         process.exit(1);
