@@ -1,4 +1,3 @@
-import { beforeAll, afterAll, afterEach } from "vitest";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import mongoose from "mongoose";
 import { CaseModel } from "../src/models/case.model";
