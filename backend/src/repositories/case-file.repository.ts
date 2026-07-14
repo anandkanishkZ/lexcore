@@ -106,6 +106,17 @@ export class CaseFileMongoRepository {
         await CaseFileModel.findByIdAndUpdate(id, { extractedText });
     }
 
+    /** Overwrites a file's current content (new version upload) — name/
+     * folder/starred stay as they were; the prior content is snapshotted
+     * into FileVersion by the caller before this runs (see
+     * DocumentService.recordNewVersion). */
+    async replaceContent(
+        id: string,
+        data: { mimeType: string; size: number; storagePath: string; extractedText?: string }
+    ): Promise<ICaseFile | null> {
+        return CaseFileModel.findByIdAndUpdate(id, data, { new: true });
+    }
+
     /** Every non-trashed file in one case — used by AiService.summarizeCase to
      * assemble the case's documents' extractedText. */
     async listAllByCase(caseId: string, limit: number): Promise<ICaseFile[]> {

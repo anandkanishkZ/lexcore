@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import fs from "fs";
 import { DocumentService } from "../services/document.service";
-import { CreateFolderDTO, UpdateFileDTO, UpdateFolderDTO, CopyFileDTO } from "../dtos/document.dto";
+import { CreateFolderDTO, UpdateFileDTO, UpdateFolderDTO, CopyFileDTO, ShareFileDTO } from "../dtos/document.dto";
 import { IUser } from "../models/user.model";
 import { ApiResponseHelper } from "../utils/apihelper.util";
 import { handleControllerError } from "../utils/error-handler.util";
@@ -113,6 +113,86 @@ export class DocumentController {
             res.setHeader("Content-Type", file.mimeType);
             res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(file.name)}"`);
             fs.createReadStream(file.storagePath).pipe(res);
+        } catch (error: any) {
+            return handleControllerError(res, error, "DocumentController");
+        }
+    }
+
+    // --- Sharing ---------------------------------------------------------------
+
+    async shareFile(req: Request, res: Response) {
+        try {
+            const parsed = ShareFileDTO.safeParse(req.body);
+            if (!parsed.success) {
+                return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
+            }
+            const share = await documentService.shareFile(
+                String(req.params.id),
+                parsed.data.email,
+                parsed.data.role,
+                userId(req),
+                requestingUser(req)
+            );
+            return ApiResponseHelper.success(res, share, "File shared successfully", 201);
+        } catch (error: any) {
+            return handleControllerError(res, error, "DocumentController");
+        }
+    }
+
+    async listShares(req: Request, res: Response) {
+        try {
+            const shares = await documentService.listShares(String(req.params.id), requestingUser(req));
+            return ApiResponseHelper.success(res, shares, "Shares fetched successfully", 200);
+        } catch (error: any) {
+            return handleControllerError(res, error, "DocumentController");
+        }
+    }
+
+    async revokeShare(req: Request, res: Response) {
+        try {
+            await documentService.revokeShare(String(req.params.id), String(req.params.shareId), requestingUser(req));
+            return ApiResponseHelper.success(res, null, "Share revoked", 200);
+        } catch (error: any) {
+            return handleControllerError(res, error, "DocumentController");
+        }
+    }
+
+    // --- Versioning --------------------------------------------------------------
+
+    async uploadVersion(req: Request, res: Response) {
+        try {
+            if (!req.file) return ApiResponseHelper.error(res, "No file provided", 400);
+            const updated = await documentService.recordNewVersion(
+                req.file,
+                String(req.params.id),
+                userId(req),
+                requestingUser(req)
+            );
+            return ApiResponseHelper.success(res, updated, "New version uploaded successfully", 201);
+        } catch (error: any) {
+            return handleControllerError(res, error, "DocumentController");
+        }
+    }
+
+    async listVersions(req: Request, res: Response) {
+        try {
+            const versions = await documentService.listVersions(String(req.params.id), requestingUser(req));
+            return ApiResponseHelper.success(res, versions, "Versions fetched successfully", 200);
+        } catch (error: any) {
+            return handleControllerError(res, error, "DocumentController");
+        }
+    }
+
+    async downloadVersion(req: Request, res: Response) {
+        try {
+            const version = await documentService.getVersionForDownload(
+                String(req.params.id),
+                String(req.params.versionId),
+                requestingUser(req)
+            );
+            res.setHeader("Content-Type", version.mimeType);
+            res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(version.name)}"`);
+            fs.createReadStream(version.storagePath).pipe(res);
         } catch (error: any) {
             return handleControllerError(res, error, "DocumentController");
         }

@@ -12,6 +12,8 @@ import {
     Download,
     ExternalLink,
     AlertTriangle,
+    Share2,
+    History,
 } from "lucide-react";
 import {
     trashDocumentAction,
@@ -28,6 +30,8 @@ import { downloadUrl } from "@/lib/fileMeta";
 import type { EntryTarget, FileRow, FolderRow, DocumentsMode } from "./documentTypes";
 import RenameModal from "./RenameModal";
 import MoveModal from "./MoveModal";
+import ShareModal from "./ShareModal";
+import VersionHistoryModal from "./VersionHistoryModal";
 
 export interface MenuItem {
     label: string;
@@ -54,6 +58,8 @@ export function useDocumentActions(caseId: string, mode: DocumentsMode) {
     const [deleteTarget, setDeleteTarget] = useState<EntryTarget | null>(null);
     const [renameTarget, setRenameTarget] = useState<EntryTarget | null>(null);
     const [moveTarget, setMoveTarget] = useState<EntryTarget | null>(null);
+    const [shareTarget, setShareTarget] = useState<{ _id: string; name: string } | null>(null);
+    const [versionsTarget, setVersionsTarget] = useState<{ _id: string; name: string } | null>(null);
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
 
     const runAndRefresh = (action: () => Promise<{ success: boolean; message?: string }>) => {
@@ -92,6 +98,8 @@ export function useDocumentActions(caseId: string, mode: DocumentsMode) {
             { label: "Rename", icon: <Pencil className="w-3.5 h-3.5" />, onClick: () => setRenameTarget({ type: "file", id: file._id, name: file.name }) },
             { label: "Move", icon: <FolderInput className="w-3.5 h-3.5" />, onClick: () => setMoveTarget({ type: "file", id: file._id, name: file.name }) },
             { label: "Make a copy", icon: <Copy className="w-3.5 h-3.5" />, onClick: () => runAndRefresh(() => copyDocumentAction(caseId, file._id)) },
+            { label: "Share", icon: <Share2 className="w-3.5 h-3.5" />, onClick: () => setShareTarget({ _id: file._id, name: file.name }) },
+            { label: "Version history", icon: <History className="w-3.5 h-3.5" />, onClick: () => setVersionsTarget({ _id: file._id, name: file.name }) },
             { label: "Move to trash", icon: <Trash2 className="w-3.5 h-3.5" />, onClick: () => setDeleteTarget({ type: "file", id: file._id, name: file.name }), danger: true },
         ];
     }
@@ -132,6 +140,10 @@ export function useDocumentActions(caseId: string, mode: DocumentsMode) {
             )}
             {renameTarget && <RenameModal caseId={caseId} target={renameTarget} onClose={() => setRenameTarget(null)} />}
             {moveTarget && <MoveModal caseId={caseId} target={moveTarget} onClose={() => setMoveTarget(null)} />}
+            {shareTarget && <ShareModal file={shareTarget} onClose={() => setShareTarget(null)} />}
+            {versionsTarget && (
+                <VersionHistoryModal caseId={caseId} file={versionsTarget} onClose={() => setVersionsTarget(null)} />
+            )}
         </>
     );
 

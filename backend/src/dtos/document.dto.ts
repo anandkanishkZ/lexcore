@@ -30,3 +30,11 @@ export const CopyFileDTO = z.object({
     folder: z.string().nullable().optional(),
 });
 export type CopyFileDTO = z.infer<typeof CopyFileDTO>;
+
+// POST /documents/:id/share — grants (or updates) one person's access to a
+// single file by email, independent of case membership.
+export const ShareFileDTO = z.object({
+    email: z.string().email("A valid email is required"),
+    role: z.enum(["viewer", "editor"]).default("viewer"),
+});
+export type ShareFileDTO = z.infer<typeof ShareFileDTO>;

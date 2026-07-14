@@ -146,3 +146,40 @@ export async function permanentlyDeleteFolderApi(token: string, id: string) {
     });
     return res.json();
 }
+
+// --- Sharing (DMS collaboration) --------------------------------------------
+
+export async function shareDocumentApi(token: string, id: string, email: string, role: "viewer" | "editor") {
+    const res = await fetch(`${API_URL}/api/v1/documents/${id}/share`, {
+        method: "POST",
+        headers: authHeaders(token, true),
+        body: JSON.stringify({ email, role }),
+    });
+    return res.json();
+}
+
+export async function fetchSharesApi(token: string, id: string) {
+    const res = await fetch(`${API_URL}/api/v1/documents/${id}/shares`, {
+        method: "GET",
+        headers: authHeaders(token),
+    });
+    return res.json();
+}
+
+export async function revokeShareApi(token: string, id: string, shareId: string) {
+    const res = await fetch(`${API_URL}/api/v1/documents/${id}/shares/${shareId}`, {
+        method: "DELETE",
+        headers: authHeaders(token),
+    });
+    return res.json();
+}
+
+// --- Versioning (DMS collaboration) -----------------------------------------
+
+export async function fetchVersionsApi(token: string, id: string) {
+    const res = await fetch(`${API_URL}/api/v1/documents/${id}/versions`, {
+        method: "GET",
+        headers: authHeaders(token),
+    });
+    return res.json();
+}

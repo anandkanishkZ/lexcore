@@ -58,3 +58,8 @@ export function formatDate(value: string): string {
 export function downloadUrl(id: string): string {
     return `/api/documents/${id}/download`;
 }
+
+/** Same, for one archived (non-current) version of a file. */
+export function versionDownloadUrl(fileId: string, versionId: string): string {
+    return `/api/documents/${fileId}/versions/${versionId}/download`;
+}

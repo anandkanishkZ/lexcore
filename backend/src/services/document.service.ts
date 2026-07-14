@@ -2,18 +2,29 @@ import fs from "fs";
 import path from "path";
 import { CaseFolderMongoRepository } from "../repositories/case-folder.repository";
 import { CaseFileMongoRepository, FileListFilters } from "../repositories/case-file.repository";
+import { FileShareMongoRepository } from "../repositories/file-share.repository";
+import { FileVersionMongoRepository } from "../repositories/file-version.repository";
 import { CaseService } from "./case.service";
 import { HttpException } from "../exceptions/http-exception";
 import { ICaseFolder } from "../models/case-folder.model";
 import { ICaseFile } from "../models/case-file.model";
+import { IFileShare } from "../models/file-share.model";
+import { IFileVersion } from "../models/file-version.model";
 import { CreateFolderDTO } from "../dtos/document.dto";
 import { extractTextSafely, ocrPdfText } from "../utils/text-extraction.util";
+import { UserMongoRepository } from "../repositories/user.repository";
+import { NotificationService } from "./notification.service";
+import { sendMail } from "../utils/mail.util";
 
 type RequestingUser = { role: string; email: string };
 
 const folderRepository = new CaseFolderMongoRepository();
 const fileRepository = new CaseFileMongoRepository();
+const fileShareRepository = new FileShareMongoRepository();
+const fileVersionRepository = new FileVersionMongoRepository();
 const caseService = new CaseService();
+const userRepository = new UserMongoRepository();
+const notificationService = new NotificationService();
 
 const RECENT_LIMIT = 50;
 
@@ -93,8 +104,148 @@ export class DocumentService {
     async getFileForDownload(id: string, requestingUser: RequestingUser): Promise<ICaseFile> {
         const file = await fileRepository.getById(id);
         if (!file) throw new HttpException(404, "File not found");
-        await caseService.assertAccess(file.case.toString(), requestingUser);
+        await this.assertFileAccess(file, requestingUser);
         return file;
+    }
+
+    // --- Sharing (Module 5 DMS collaboration) --------------------------------
+    // Only someone with base case access (admin or the case's own client) can
+    // manage a file's shares — a share recipient (viewer or editor) cannot
+    // re-share further. Keeps the share surface from growing chains.
+
+    async shareFile(
+        fileId: string,
+        email: string,
+        role: "viewer" | "editor",
+        userId: string,
+        requestingUser: RequestingUser
+    ): Promise<IFileShare> {
+        const file = await fileRepository.getById(fileId);
+        if (!file) throw new HttpException(404, "File not found");
+        await caseService.assertAccess(file.case.toString(), requestingUser);
+
+        const share = await fileShareRepository.upsert(fileId, email, role, userId);
+
+        const recipient = await userRepository.getUserByEmail(email);
+        const subject = `You've been given ${role} access to "${file.name}"`;
+        const body = `You can now ${role === "editor" ? "view and upload new versions of" : "view"} "${file.name}" in Lexcore.`;
+        if (recipient) {
+            await notificationService.notifyUser(recipient._id.toString(), "File shared with you", subject, {
+                type: "CaseFile",
+                id: fileId,
+            });
+        }
+        await sendMail(email, subject, body);
+
+        return share;
+    }
+
+    async listShares(fileId: string, requestingUser: RequestingUser): Promise<IFileShare[]> {
+        const file = await fileRepository.getById(fileId);
+        if (!file) throw new HttpException(404, "File not found");
+        await caseService.assertAccess(file.case.toString(), requestingUser);
+        return fileShareRepository.listByFile(fileId);
+    }
+
+    async revokeShare(fileId: string, shareId: string, requestingUser: RequestingUser): Promise<void> {
+        const file = await fileRepository.getById(fileId);
+        if (!file) throw new HttpException(404, "File not found");
+        await caseService.assertAccess(file.case.toString(), requestingUser);
+
+        const share = await fileShareRepository.getById(shareId);
+        if (!share || share.file.toString() !== fileId) throw new HttpException(404, "Share not found");
+        await fileShareRepository.remove(shareId);
+    }
+
+    // --- Versioning (Module 5 DMS collaboration) -----------------------------
+    // CaseFile always holds the current version; every other read path in
+    // this service (list, download, search, AI summarize) keeps working
+    // unchanged. FileVersion is purely the append-only history alongside it.
+
+    async recordNewVersion(
+        file: Express.Multer.File,
+        fileId: string,
+        userId: string,
+        requestingUser: RequestingUser
+    ): Promise<ICaseFile> {
+        const existing = await fileRepository.getById(fileId);
+        if (!existing) throw new HttpException(404, "File not found");
+        await this.assertCanEditFile(existing, requestingUser);
+
+        const nextVersionNumber = (await fileVersionRepository.countByFile(fileId)) + 1;
+        // Snapshot the state being replaced, then extract fresh text for the
+        // new upload the same way a first-time upload does.
+        await fileVersionRepository.create({
+            file: fileId,
+            versionNumber: nextVersionNumber,
+            name: existing.name,
+            mimeType: existing.mimeType,
+            size: existing.size,
+            storagePath: existing.storagePath,
+            uploadedBy: userId,
+        });
+
+        const extraction = await extractTextSafely(file.path, file.mimetype);
+        const updated = await fileRepository.replaceContent(fileId, {
+            mimeType: file.mimetype,
+            size: file.size,
+            storagePath: file.path,
+            extractedText: extraction.text,
+        });
+        if (!updated) throw new HttpException(500, "Failed to record new version");
+
+        if (extraction.needsOcr) {
+            ocrPdfText(file.path)
+                .then((text) => (text ? fileRepository.updateExtractedText(fileId, text) : undefined))
+                .catch((error) => console.error(`[ocr:error] file ${fileId}:`, error));
+        }
+
+        return updated;
+    }
+
+    async listVersions(fileId: string, requestingUser: RequestingUser): Promise<IFileVersion[]> {
+        const file = await fileRepository.getById(fileId);
+        if (!file) throw new HttpException(404, "File not found");
+        await this.assertFileAccess(file, requestingUser);
+        return fileVersionRepository.listByFile(fileId);
+    }
+
+    async getVersionForDownload(
+        fileId: string,
+        versionId: string,
+        requestingUser: RequestingUser
+    ): Promise<IFileVersion> {
+        const file = await fileRepository.getById(fileId);
+        if (!file) throw new HttpException(404, "File not found");
+        await this.assertFileAccess(file, requestingUser);
+
+        const version = await fileVersionRepository.getById(versionId);
+        if (!version || version.file.toString() !== fileId) throw new HttpException(404, "Version not found");
+        return version;
+    }
+
+    // --- Access helpers -------------------------------------------------------
+
+    /** View access: base case access (admin/case's client), OR any active
+     * share (viewer or editor) for this specific file. */
+    private async assertFileAccess(file: ICaseFile, requestingUser: RequestingUser): Promise<void> {
+        try {
+            await caseService.assertAccess(file.case.toString(), requestingUser);
+        } catch (error) {
+            const share = await fileShareRepository.findByFileAndEmail(file._id.toString(), requestingUser.email);
+            if (!share) throw error;
+        }
+    }
+
+    /** Edit access (new versions): base case access, OR an editor-role share
+     * for this specific file — a viewer share cannot upload new versions. */
+    private async assertCanEditFile(file: ICaseFile, requestingUser: RequestingUser): Promise<void> {
+        try {
+            await caseService.assertAccess(file.case.toString(), requestingUser);
+        } catch (error) {
+            const share = await fileShareRepository.findByFileAndEmail(file._id.toString(), requestingUser.email);
+            if (!share || share.role !== "editor") throw error;
+        }
     }
 
     // --- Rename / move / star (one partial-update method per entity type,
@@ -249,6 +400,7 @@ export class DocumentService {
         await caseService.assertAccess(file.case.toString(), requestingUser);
 
         await fileRepository.hardDelete(id);
+        await Promise.all([fileShareRepository.removeAllForFile(id), fileVersionRepository.removeAllForFile(id)]);
         fs.unlink(file.storagePath, () => {
             // Best-effort — see the identical comment pattern this mirrors below.
         });

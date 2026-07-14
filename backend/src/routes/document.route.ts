@@ -46,6 +46,17 @@ documentRouter.patch("/folders/:id", documentController.updateFolder);
 
 documentRouter.get("/:id/download", documentController.download);
 
+// Sharing and versioning: no route-level access middleware, same as
+// /:id/download above — DocumentService checks case access OR a file-level
+// share/editor grant, which requireCaseQueryAccess doesn't know how to do.
+documentRouter.post("/:id/share", documentController.shareFile);
+documentRouter.get("/:id/shares", documentController.listShares);
+documentRouter.delete("/:id/shares/:shareId", documentController.revokeShare);
+
+documentRouter.post("/:id/versions", caseFileUpload.single("file"), documentController.uploadVersion);
+documentRouter.get("/:id/versions", documentController.listVersions);
+documentRouter.get("/:id/versions/:versionId/download", documentController.downloadVersion);
+
 documentRouter.delete("/:id/permanent", documentController.permanentlyDeleteFile);
 documentRouter.delete("/folders/:id/permanent", documentController.permanentlyDeleteFolder);
 documentRouter.delete("/folders/:id", documentController.trashFolder);

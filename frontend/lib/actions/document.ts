@@ -16,6 +16,10 @@ import {
     trashFolderApi,
     permanentlyDeleteDocumentApi,
     permanentlyDeleteFolderApi,
+    shareDocumentApi,
+    fetchSharesApi,
+    revokeShareApi,
+    fetchVersionsApi,
     type DocumentListFilters,
 } from "../api/document";
 import { getTokenCookie } from "../cookies";
@@ -240,5 +244,49 @@ export async function permanentlyDeleteFolderAction(caseId: string, id: string) 
         return result;
     } catch (error) {
         return { success: false, message: errorMessage(error, "Failed to permanently delete folder") };
+    }
+}
+
+// --- Sharing (DMS collaboration) --------------------------------------------
+
+export async function shareDocumentAction(id: string, email: string, role: "viewer" | "editor") {
+    try {
+        const token = await getTokenCookie();
+        if (!token) return { success: false, message: "Not authenticated" };
+        return await shareDocumentApi(token, id, email, role);
+    } catch (error) {
+        return { success: false, message: errorMessage(error, "Failed to share file") };
+    }
+}
+
+export async function fetchSharesAction(id: string) {
+    try {
+        const token = await getTokenCookie();
+        if (!token) return { success: false, message: "Not authenticated" };
+        return await fetchSharesApi(token, id);
+    } catch (error) {
+        return { success: false, message: errorMessage(error, "Failed to fetch shares") };
+    }
+}
+
+export async function revokeShareAction(id: string, shareId: string) {
+    try {
+        const token = await getTokenCookie();
+        if (!token) return { success: false, message: "Not authenticated" };
+        return await revokeShareApi(token, id, shareId);
+    } catch (error) {
+        return { success: false, message: errorMessage(error, "Failed to revoke share") };
+    }
+}
+
+// --- Versioning (DMS collaboration) -----------------------------------------
+
+export async function fetchVersionsAction(id: string) {
+    try {
+        const token = await getTokenCookie();
+        if (!token) return { success: false, message: "Not authenticated" };
+        return await fetchVersionsApi(token, id);
+    } catch (error) {
+        return { success: false, message: errorMessage(error, "Failed to fetch version history") };
     }
 }
