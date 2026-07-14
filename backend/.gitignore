@@ -3,3 +3,8 @@ dist/
 .env
 *.js.map
 uploads/
+
+# Tesseract.js auto-downloads its ~5MB OCR language model on first use
+# (see utils/text-extraction.util.ts) — a runtime cache, not source.
+.cache/
+*.traineddata

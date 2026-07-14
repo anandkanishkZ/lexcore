@@ -7,7 +7,7 @@ import { HttpException } from "../exceptions/http-exception";
 import { ICaseFolder } from "../models/case-folder.model";
 import { ICaseFile } from "../models/case-file.model";
 import { CreateFolderDTO } from "../dtos/document.dto";
-import { extractTextSafely } from "../utils/text-extraction.util";
+import { extractTextSafely, ocrPdfText } from "../utils/text-extraction.util";
 
 type RequestingUser = { role: string; email: string };
 
@@ -65,8 +65,8 @@ export class DocumentService {
     ): Promise<ICaseFile> {
         // Ownership is already enforced by requireCaseQueryAccess before multer
         // ever touches disk (see document.route.ts) — no re-check needed here.
-        const extractedText = await extractTextSafely(file.path, file.mimetype);
-        return fileRepository.create({
+        const extraction = await extractTextSafely(file.path, file.mimetype);
+        const created = await fileRepository.create({
             name: file.originalname,
             case: caseId,
             folder: folderId ?? null,
@@ -74,8 +74,20 @@ export class DocumentService {
             size: file.size,
             storagePath: file.path,
             uploadedBy: userId,
-            extractedText,
+            extractedText: extraction.text,
         });
+
+        if (extraction.needsOcr) {
+            // Fire-and-forget: OCR runs several seconds per page, far longer
+            // than an upload request should hang (e.g. the mobile app's 20s
+            // timeout) — the response above has already gone out by the time
+            // this resolves. Backfills extractedText in place once done.
+            ocrPdfText(file.path)
+                .then((text) => (text ? fileRepository.updateExtractedText(created._id.toString(), text) : undefined))
+                .catch((error) => console.error(`[ocr:error] file ${created._id}:`, error));
+        }
+
+        return created;
     }
 
     async getFileForDownload(id: string, requestingUser: RequestingUser): Promise<ICaseFile> {

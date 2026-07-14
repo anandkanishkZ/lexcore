@@ -99,6 +99,13 @@ export class CaseFileMongoRepository {
         return CaseFileModel.findById(id);
     }
 
+    /** Fills in extractedText after a background OCR pass completes (see
+     * text-extraction.util.ts's ocrPdfText) — the upload response has
+     * already gone out by the time this runs. */
+    async updateExtractedText(id: string, extractedText: string): Promise<void> {
+        await CaseFileModel.findByIdAndUpdate(id, { extractedText });
+    }
+
     /** Every non-trashed file in one case — used by AiService.summarizeCase to
      * assemble the case's documents' extractedText. */
     async listAllByCase(caseId: string, limit: number): Promise<ICaseFile[]> {
