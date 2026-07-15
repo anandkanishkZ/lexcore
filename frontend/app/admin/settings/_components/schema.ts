@@ -9,6 +9,12 @@ export const firmSettingsSchema = z.object({
     website: z.string().optional(),
     currency: z.string().optional(),
     practiceAreas: z.string().optional(),
+    esewaEnabled: z.boolean().optional(),
+    esewaEnvironment: z.enum(["test", "live"]).optional(),
+    esewaClientId: z.string().optional(),
+    // Left blank on submit to keep whatever secret is already saved — see
+    // FirmSettingsForm's helper text and the backend's matching behavior.
+    esewaSecret: z.string().optional(),
 });
 
 export type FirmSettingsFormData = z.infer<typeof firmSettingsSchema>;

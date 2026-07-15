@@ -8,24 +8,29 @@ import { updateFirmSettingsAction } from "@/lib/actions/settings";
 
 interface FirmSettingsFormProps {
     defaultValues: FirmSettingsFormData;
+    esewaSecretConfigured: boolean;
 }
 
 const inputClass =
     "w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition bg-white";
 
-export default function FirmSettingsForm({ defaultValues }: FirmSettingsFormProps) {
+export default function FirmSettingsForm({ defaultValues, esewaSecretConfigured }: FirmSettingsFormProps) {
     const [isPending, startTransition] = useTransition();
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
+    const [secretConfigured, setSecretConfigured] = useState(esewaSecretConfigured);
 
     const {
         register,
         handleSubmit,
+        watch,
         formState: { errors },
     } = useForm<FirmSettingsFormData>({
         resolver: zodResolver(firmSettingsSchema),
         defaultValues,
     });
+
+    const esewaEnabled = watch("esewaEnabled");
 
     const onSubmit = (data: FirmSettingsFormData) => {
         setError("");
@@ -39,6 +44,7 @@ export default function FirmSettingsForm({ defaultValues }: FirmSettingsFormProp
             });
             if (result.success) {
                 setSuccess(true);
+                if (data.esewaSecret) setSecretConfigured(true);
             } else {
                 setError(result.message || "Failed to update firm settings");
             }
@@ -99,6 +105,51 @@ export default function FirmSettingsForm({ defaultValues }: FirmSettingsFormProp
                     placeholder="Civil, Criminal, Corporate, Family"
                     className={inputClass}
                 />
+            </div>
+
+            <div className="pt-4 mt-2 border-t border-slate-200">
+                <div className="flex items-center justify-between mb-1">
+                    <h2 className="text-sm font-semibold text-slate-900">Payment Gateway — eSewa</h2>
+                    <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+                        <input type="checkbox" {...register("esewaEnabled")} className="h-4 w-4 rounded border-slate-300 text-brand-gold focus:ring-brand-gold/20" />
+                        Enabled
+                    </label>
+                </div>
+                <p className="text-xs text-slate-500 mb-4">
+                    Lets clients pay an invoice from the mobile app. Disabled until credentials are saved here.
+                </p>
+
+                <div className={`space-y-4 ${esewaEnabled ? "" : "opacity-50"}`}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Environment</label>
+                            <select {...register("esewaEnvironment")} disabled={!esewaEnabled} className={inputClass}>
+                                <option value="test">Test</option>
+                                <option value="live">Live</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Client ID</label>
+                            <input type="text" {...register("esewaClientId")} disabled={!esewaEnabled} className={inputClass} />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                            Secret Key{" "}
+                            {secretConfigured && (
+                                <span className="ml-1 text-xs font-normal text-emerald-600">— a secret is already saved</span>
+                            )}
+                        </label>
+                        <input
+                            type="password"
+                            {...register("esewaSecret")}
+                            disabled={!esewaEnabled}
+                            placeholder={secretConfigured ? "Leave blank to keep the saved secret" : "Enter the eSewa secret key"}
+                            autoComplete="new-password"
+                            className={inputClass}
+                        />
+                    </div>
+                </div>
             </div>
 
             <div className="pt-2">

@@ -23,6 +23,10 @@ export async function updateFirmSettingsAction(data: {
     website?: string;
     currency?: string;
     practiceAreas?: string[];
+    esewaEnabled?: boolean;
+    esewaEnvironment?: "test" | "live";
+    esewaClientId?: string;
+    esewaSecret?: string;
 }) {
     try {
         const token = await getTokenCookie();

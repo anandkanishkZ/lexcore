@@ -19,6 +19,10 @@ export async function updateFirmSettingsApi(
         website?: string;
         currency?: string;
         practiceAreas?: string[];
+        esewaEnabled?: boolean;
+        esewaEnvironment?: "test" | "live";
+        esewaClientId?: string;
+        esewaSecret?: string;
     }
 ) {
     const res = await fetch(`${API_URL}/api/v1/settings/firm`, {

@@ -22,6 +22,7 @@ export default async function SettingsPage() {
 
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
                 <FirmSettingsForm
+                    esewaSecretConfigured={settings.esewaSecretConfigured ?? false}
                     defaultValues={{
                         name: settings.name ?? "Lexcore",
                         logoUrl: settings.logoUrl ?? "",
@@ -31,6 +32,10 @@ export default async function SettingsPage() {
                         website: settings.website ?? "",
                         currency: settings.currency ?? "USD",
                         practiceAreas: (settings.practiceAreas ?? []).join(", "),
+                        esewaEnabled: settings.esewaEnabled ?? false,
+                        esewaEnvironment: settings.esewaEnvironment ?? "test",
+                        esewaClientId: settings.esewaClientId ?? "",
+                        esewaSecret: "",
                     }}
                 />
             </div>
