@@ -19,6 +19,11 @@ function formatTime(iso: string) {
     return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
 
+// How long the local composer can sit idle before we tell the other side
+// typing stopped — also doubles as the receiving-side safety-net timeout in
+// case a "stop" event is ever missed (dropped connection mid-keystroke).
+const TYPING_IDLE_MS = 2000;
+
 export default function MessagesThread({
     caseId,
     initialMessages,
@@ -34,8 +39,12 @@ export default function MessagesThread({
     const [sending, setSending] = useState(false);
     const [connected, setConnected] = useState(false);
     const [socketError, setSocketError] = useState<string | null>(null);
+    const [typingUser, setTypingUser] = useState<string | null>(null);
     const socketRef = useRef<Socket | null>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
+    const iAmTypingRef = useRef(false);
+    const myTypingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const typingClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         const socket = io(API_URL, { auth: { token }, transports: ["websocket"] });
@@ -56,11 +65,49 @@ export default function MessagesThread({
         socket.on("error", (payload: { message?: string }) => {
             setSocketError(payload?.message || "Something went wrong with the connection.");
         });
+        socket.on("typing", (payload: { userName: string; isTyping: boolean }) => {
+            if (typingClearTimerRef.current) clearTimeout(typingClearTimerRef.current);
+            if (!payload.isTyping) {
+                setTypingUser(null);
+                return;
+            }
+            setTypingUser(payload.userName || "Someone");
+            // Safety net in case a "stop" broadcast is ever missed (e.g. a
+            // connection drop mid-keystroke) — the indicator can't get stuck.
+            typingClearTimerRef.current = setTimeout(() => setTypingUser(null), TYPING_IDLE_MS * 2.5);
+        });
 
         return () => {
             socket.close();
+            if (myTypingTimerRef.current) clearTimeout(myTypingTimerRef.current);
+            if (typingClearTimerRef.current) clearTimeout(typingClearTimerRef.current);
         };
     }, [caseId, token]);
+
+    // Throttled: only actually emits "typing:start" on the transition into
+    // typing, then resets a single idle timer that emits "typing:stop" once
+    // the composer sits still — not on every keystroke.
+    const notifyTyping = () => {
+        const socket = socketRef.current;
+        if (!socket?.connected) return;
+        if (!iAmTypingRef.current) {
+            iAmTypingRef.current = true;
+            socket.emit("typing:start", { caseId });
+        }
+        if (myTypingTimerRef.current) clearTimeout(myTypingTimerRef.current);
+        myTypingTimerRef.current = setTimeout(() => {
+            iAmTypingRef.current = false;
+            socket.emit("typing:stop", { caseId });
+        }, TYPING_IDLE_MS);
+    };
+
+    const stopTypingNow = () => {
+        if (myTypingTimerRef.current) clearTimeout(myTypingTimerRef.current);
+        if (iAmTypingRef.current) {
+            iAmTypingRef.current = false;
+            socketRef.current?.emit("typing:stop", { caseId });
+        }
+    };
 
     useEffect(() => {
         if (!socketError) return;
@@ -70,13 +117,14 @@ export default function MessagesThread({
 
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages]);
+    }, [messages, typingUser]);
 
     const handleSend = async () => {
         const content = draft.trim();
         if (!content || sending) return;
         setSending(true);
         setDraft("");
+        stopTypingNow();
 
         // Prefer the live socket (instant, and broadcasts to the room including
         // ourselves); fall back to the REST action if the socket isn't
@@ -133,6 +181,16 @@ export default function MessagesThread({
                         );
                     })
                 )}
+                {typingUser && (
+                    <div className="flex justify-start">
+                        <div className="max-w-[75%] rounded-2xl px-4 py-3 bg-slate-100 flex items-center gap-1.5" aria-live="polite">
+                            <span className="sr-only">{typingUser} is typing</span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:-0.3s]" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:-0.15s]" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" />
+                        </div>
+                    </div>
+                )}
                 <div ref={bottomRef} />
             </div>
 
@@ -145,7 +203,11 @@ export default function MessagesThread({
             <div className="flex items-center gap-2 px-4 py-3 border-t border-slate-100">
                 <input
                     value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
+                    onChange={(e) => {
+                        setDraft(e.target.value);
+                        if (e.target.value.trim()) notifyTyping();
+                        else stopTypingNow();
+                    }}
                     onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
                             e.preventDefault();

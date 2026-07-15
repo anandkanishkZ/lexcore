@@ -73,8 +73,30 @@ export function initChatGateway(io: Server): void {
             }
         });
 
+        // No DB check here — joinedCaseIds already mirrors real room
+        // membership (only ever added after "join" passes assertChatAccess),
+        // and typing events fire far more often than sends, so re-verifying
+        // against the DB on every keystroke would be wasted work.
+        const broadcastTyping = (caseId: string, isTyping: boolean) => {
+            if (!joinedCaseIds.has(caseId)) return;
+            socket.to(`case:${caseId}`).emit("typing", {
+                caseId,
+                userId: user._id.toString(),
+                userName: `${user.firstName} ${user.lastName}`.trim(),
+                isTyping,
+            });
+        };
+
+        socket.on("typing:start", ({ caseId }: { caseId: string }) => broadcastTyping(caseId, true));
+        socket.on("typing:stop", ({ caseId }: { caseId: string }) => broadcastTyping(caseId, false));
+
         socket.on("disconnect", () => {
-            for (const caseId of joinedCaseIds) markOffline(caseId, user._id.toString());
+            for (const caseId of joinedCaseIds) {
+                markOffline(caseId, user._id.toString());
+                // Closing the tab/app mid-keystroke shouldn't leave the other
+                // side staring at a stuck "typing…" forever.
+                broadcastTyping(caseId, false);
+            }
         });
     });
 }
