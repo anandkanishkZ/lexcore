@@ -113,7 +113,12 @@ export class MemberMongoRepository {
                                 subtype: {
                                     $cond: [{ $eq: ["$role", "admin"] }, "admin", "$userType"],
                                 },
-                                status: { $literal: null },
+                                // Was always null — User didn't have an
+                                // isActive field until the deactivation
+                                // feature was added; now mirrors Client's own
+                                // "active"/"inactive" string convention so the
+                                // one Status column in the UI works for both.
+                                status: { $cond: [{ $eq: ["$isActive", false] }, "inactive", "active"] },
                                 createdAt: 1,
                             },
                         },

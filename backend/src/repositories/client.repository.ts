@@ -1,5 +1,6 @@
 import { ClientModel, IClient } from "../models/client.model";
 import { escapeRegex } from "../utils/regex.util";
+import { normalizeEmail } from "../utils/email.util";
 
 export interface ClientQuery {
     page: number;
@@ -40,15 +41,16 @@ export class ClientMongoRepository {
     }
 
     async getByEmail(email: string): Promise<IClient | null> {
-        return await ClientModel.findOne({ email });
+        return await ClientModel.findOne({ email: normalizeEmail(email) });
     }
 
     async create(client: Partial<IClient>): Promise<IClient> {
-        return await ClientModel.create(client);
+        return await ClientModel.create({ ...client, email: client.email ? normalizeEmail(client.email) : client.email });
     }
 
     async update(id: string, client: Partial<IClient>): Promise<IClient | null> {
-        return await ClientModel.findByIdAndUpdate(id, client, { new: true }).populate(
+        const payload = client.email ? { ...client, email: normalizeEmail(client.email) } : client;
+        return await ClientModel.findByIdAndUpdate(id, payload, { new: true }).populate(
             "createdBy",
             "firstName lastName email"
         );

@@ -255,4 +255,74 @@ describe("invoices", () => {
             .send({ client: "000000000000000000000000", items: [{ description: "Fee", quantity: 1, rate: 10 }], dueDate: "2026-12-31" });
         expect(res.status).toBe(403);
     });
+
+    it("blocks deleting an invoice that has a recorded payment, and voiding is offered instead", async () => {
+        const { token, user: admin } = await createUserAndToken({ role: "admin" });
+        const client = await makeClient(admin._id.toString());
+
+        const created = await request(app)
+            .post("/api/v1/invoices")
+            .set("Authorization", `Bearer ${token}`)
+            .send({ client: client._id.toString(), items: [{ description: "Fee", quantity: 1, rate: 100 }], dueDate: "2026-12-31" });
+        const invoiceId = created.body.data._id;
+
+        await request(app)
+            .post(`/api/v1/invoices/${invoiceId}/payments`)
+            .set("Authorization", `Bearer ${token}`)
+            .send({ amount: 40, method: "cash" });
+
+        const del = await request(app).delete(`/api/v1/invoices/${invoiceId}`).set("Authorization", `Bearer ${token}`);
+        expect(del.status).toBe(400);
+
+        const voided = await request(app).post(`/api/v1/invoices/${invoiceId}/void`).set("Authorization", `Bearer ${token}`);
+        expect(voided.status).toBe(200);
+        expect(voided.body.data.status).toBe("void");
+    });
+
+    it("rejects voiding an already-void or fully-paid invoice", async () => {
+        const { token, user: admin } = await createUserAndToken({ role: "admin" });
+        const client = await makeClient(admin._id.toString());
+
+        const paid = await request(app)
+            .post("/api/v1/invoices")
+            .set("Authorization", `Bearer ${token}`)
+            .send({ client: client._id.toString(), items: [{ description: "Fee", quantity: 1, rate: 50 }], dueDate: "2026-12-31" });
+        await request(app)
+            .post(`/api/v1/invoices/${paid.body.data._id}/payments`)
+            .set("Authorization", `Bearer ${token}`)
+            .send({ amount: 50, method: "cash" });
+
+        const voidPaid = await request(app).post(`/api/v1/invoices/${paid.body.data._id}/void`).set("Authorization", `Bearer ${token}`);
+        expect(voidPaid.status).toBe(400);
+
+        const draft = await request(app)
+            .post("/api/v1/invoices")
+            .set("Authorization", `Bearer ${token}`)
+            .send({ client: client._id.toString(), items: [{ description: "Fee", quantity: 1, rate: 50 }], dueDate: "2026-12-31" });
+        await request(app).post(`/api/v1/invoices/${draft.body.data._id}/void`).set("Authorization", `Bearer ${token}`);
+        const voidAgain = await request(app).post(`/api/v1/invoices/${draft.body.data._id}/void`).set("Authorization", `Bearer ${token}`);
+        expect(voidAgain.status).toBe(400);
+    });
+
+    it("rejects lowering an invoice's total below what's already been paid against it", async () => {
+        const { token, user: admin } = await createUserAndToken({ role: "admin" });
+        const client = await makeClient(admin._id.toString());
+
+        const created = await request(app)
+            .post("/api/v1/invoices")
+            .set("Authorization", `Bearer ${token}`)
+            .send({ client: client._id.toString(), items: [{ description: "Fee", quantity: 2, rate: 100 }], dueDate: "2026-12-31" });
+        const invoiceId = created.body.data._id;
+
+        await request(app)
+            .post(`/api/v1/invoices/${invoiceId}/payments`)
+            .set("Authorization", `Bearer ${token}`)
+            .send({ amount: 150, method: "cash" });
+
+        const shrink = await request(app)
+            .put(`/api/v1/invoices/${invoiceId}`)
+            .set("Authorization", `Bearer ${token}`)
+            .send({ items: [{ description: "Fee", quantity: 1, rate: 50 }] });
+        expect(shrink.status).toBe(400);
+    });
 });

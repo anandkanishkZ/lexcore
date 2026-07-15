@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { z } from "zod";
-import { CreateUserDTO, LoginUserDTO, UpdateUserDTO } from "../dtos/user.dto";
+import { CreateUserDTO, LoginUserDTO, UpdateUserDTO, ChangePasswordDTO, ForgotPasswordDTO, ResetPasswordDTO } from "../dtos/user.dto";
 import { UserService } from "../services/user.service";
 import { toPublicUser, IUser } from "../models/user.model";
 import { ApiResponseHelper } from "../utils/apihelper.util";
@@ -87,6 +87,47 @@ export class UserController {
             const imagePath = `/uploads/${req.file.filename}`;
             const user = await userService.updateProfileImage(userId, imagePath);
             return ApiResponseHelper.success(res, user, "Profile image updated", 200);
+        } catch (error: any) {
+            return handleControllerError(res, error, "UserController");
+        }
+    }
+
+    async changePassword(req: Request, res: Response) {
+        try {
+            const parsed = ChangePasswordDTO.safeParse(req.body);
+            if (!parsed.success) {
+                return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
+            }
+            const userId = (req.user as IUser)._id.toString();
+            await userService.changePassword(userId, parsed.data.currentPassword, parsed.data.newPassword);
+            return ApiResponseHelper.success(res, null, "Password changed successfully", 200);
+        } catch (error: any) {
+            return handleControllerError(res, error, "UserController");
+        }
+    }
+
+    async forgotPassword(req: Request, res: Response) {
+        try {
+            const parsed = ForgotPasswordDTO.safeParse(req.body);
+            if (!parsed.success) {
+                return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
+            }
+            await userService.forgotPassword(parsed.data.email);
+            // Same message whether or not the email is registered.
+            return ApiResponseHelper.success(res, null, "If that email is registered, a reset link has been sent", 200);
+        } catch (error: any) {
+            return handleControllerError(res, error, "UserController");
+        }
+    }
+
+    async resetPassword(req: Request, res: Response) {
+        try {
+            const parsed = ResetPasswordDTO.safeParse(req.body);
+            if (!parsed.success) {
+                return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
+            }
+            await userService.resetPassword(parsed.data.token, parsed.data.newPassword);
+            return ApiResponseHelper.success(res, null, "Password reset successfully", 200);
         } catch (error: any) {
             return handleControllerError(res, error, "UserController");
         }

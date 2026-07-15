@@ -13,6 +13,16 @@ import { ClientModel } from "../../src/models/client.model";
  * row, not two unrelated rows for the same person.
  */
 describe("GET /members — account/contact source vs isStaff", () => {
+    it("rejects a client — the merged directory exposes every staff/client contact's PII, staff-only", async () => {
+        const { token: clientToken } = await createUserAndToken({ userType: "client", role: "user" });
+
+        const res = await request(app)
+            .get("/api/v1/members?page=1&size=100")
+            .set("Authorization", `Bearer ${clientToken}`);
+
+        expect(res.status).toBe(403);
+    });
+
     it("an unlinked client's own login row is source: account but isStaff: false", async () => {
         const { token: adminToken } = await createUserAndToken({ role: "admin" });
         const { user: clientUser } = await createUserAndToken({

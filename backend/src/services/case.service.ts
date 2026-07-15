@@ -5,9 +5,18 @@ import { ICase } from "../models/case.model";
 import { HttpException } from "../exceptions/http-exception";
 import { logAudit } from "../utils/audit-log.util";
 import { retryOnDuplicateKey } from "../utils/retry-unique.util";
+import { NotificationService } from "./notification.service";
+import { CaseFileModel } from "../models/case-file.model";
+import { CaseFolderModel } from "../models/case-folder.model";
+import { DocumentRequestModel } from "../models/document-request.model";
+import { CalendarEventModel } from "../models/calendar-event.model";
+import { InvoiceModel } from "../models/invoice.model";
+import { MessageModel } from "../models/message.model";
+import { TaskModel } from "../models/task.model";
 
 const caseRepository = new CaseMongoRepository();
 const userRepository = new UserMongoRepository();
+const notificationService = new NotificationService();
 
 export class CaseService {
     /**
@@ -37,7 +46,7 @@ export class CaseService {
      * only fetch a case belonging to their own email — mirrors getMine's
      * email-based scoping.
      */
-    async getById(id: string, requestingUser?: { role: string; email: string }): Promise<ICase> {
+    async getById(id: string, requestingUser?: { role: string; email: string; userId?: string }): Promise<ICase> {
         if (requestingUser) return this.assertAccess(id, requestingUser);
         const found = await caseRepository.getById(id);
         if (!found) throw new HttpException(404, "Case not found");
@@ -45,23 +54,36 @@ export class CaseService {
     }
 
     /**
-     * Fetches a case and enforces the same admin-or-owner rule as getById,
-     * for callers (e.g. DocumentService) that need the check without going
-     * through the controller. Shared here rather than duplicated so every
-     * case-scoped resource enforces access the same way.
+     * Fetches a case and enforces admin-or-client-or-assigned-attorney
+     * access, for callers (e.g. DocumentService) that need the check without
+     * going through the controller. Shared here rather than duplicated so
+     * every case-scoped resource enforces access the same way.
+     *
+     * `userId` is optional only so the couple of call sites that genuinely
+     * can't supply it (none currently — every real caller has a logged-in
+     * req.user) don't have to fake one; omitting it just means the
+     * assignedAttorney branch below can never match, falling back to the
+     * original admin-or-client rule.
+     *
+     * Was admin-or-client-only until this fix — that locked non-admin staff
+     * (attorneys/paralegals, i.e. nearly every account `role: "user"` maps
+     * to) out of every document action on every case, including ones they
+     * were the assigned attorney on. Mirrors assertChatAccess below, which
+     * already had to solve this same problem for Module 15 messaging.
      */
-    async assertAccess(id: string, requestingUser: { role: string; email: string }): Promise<ICase> {
+    async assertAccess(id: string, requestingUser: { role: string; email: string; userId?: string }): Promise<ICase> {
         const found = await caseRepository.getById(id);
         if (!found) throw new HttpException(404, "Case not found");
 
-        if (requestingUser.role !== "admin") {
-            const client = found.client as unknown as { email?: string } | null;
-            if (!client || client.email !== requestingUser.email) {
-                throw new HttpException(403, "Access denied");
-            }
-        }
+        if (requestingUser.role === "admin") return found;
 
-        return found;
+        const client = found.client as unknown as { email?: string } | null;
+        if (client && client.email === requestingUser.email) return found;
+
+        const assignedAttorney = found.assignedAttorney as unknown as { _id?: { toString(): string } } | null;
+        if (requestingUser.userId && assignedAttorney?._id?.toString() === requestingUser.userId) return found;
+
+        throw new HttpException(403, "Access denied");
     }
 
     /**
@@ -138,6 +160,19 @@ export class CaseService {
 
         if (data.assignedAttorney) await this.assertValidAttorney(data.assignedAttorney);
 
+        const isClosingNow = data.status === "closed" && existing.status !== "closed";
+        const isReopening = data.status !== undefined && data.status !== "closed" && existing.status === "closed";
+
+        if (isClosingNow) {
+            const pendingRequests = await DocumentRequestModel.countDocuments({ case: id, status: "pending" });
+            if (pendingRequests > 0) {
+                throw new HttpException(
+                    400,
+                    `Cannot close this case — ${pendingRequests} document request(s) are still pending. Cancel or fulfill them first.`
+                );
+            }
+        }
+
         const updatePayload: any = { ...data };
         if (data.client) updatePayload.client = data.client;
         if (data.assignedAttorney !== undefined) updatePayload.assignedAttorney = data.assignedAttorney || null;
@@ -146,14 +181,76 @@ export class CaseService {
         // Never allow caseNumber to be updated via the API
         delete updatePayload.caseNumber;
 
+        // A close/reopen doesn't always come with an explicit closeDate from
+        // the caller (e.g. the Kanban board's drag-and-drop only sends
+        // {status}) — without this, a case could show "Closed" with no
+        // closeDate, or "Open" next to a stale one from a previous closure.
+        if (isClosingNow && !data.closeDate) updatePayload.closeDate = new Date();
+        if (isReopening && !data.closeDate) updatePayload.closeDate = null;
+
         const updated = await caseRepository.update(id, updatePayload);
         if (!updated) throw new HttpException(500, "Failed to update case");
+
+        const actorId = requestingUser?.userId;
+        if (data.status && data.status !== existing.status) {
+            if (actorId) {
+                await logAudit({
+                    actorId,
+                    action: "case.status-change",
+                    entityType: "Case",
+                    entityId: id,
+                    metadata: `${existing.caseNumber}: ${existing.status} → ${data.status}`,
+                });
+            }
+        }
+        if (data.assignedAttorney !== undefined) {
+            const previousAttorney = (existing.assignedAttorney as unknown as { _id?: { toString(): string } } | null)?._id?.toString();
+            if (data.assignedAttorney !== previousAttorney) {
+                if (actorId) {
+                    await logAudit({
+                        actorId,
+                        action: "case.reassign",
+                        entityType: "Case",
+                        entityId: id,
+                        metadata: `${existing.caseNumber}: attorney ${previousAttorney ?? "none"} → ${data.assignedAttorney ?? "none"}`,
+                    });
+                }
+                if (data.assignedAttorney) {
+                    await notificationService.notifyUser(
+                        data.assignedAttorney,
+                        "Case assigned to you",
+                        `You've been assigned as attorney on "${updated.title}" (${updated.caseNumber}).`,
+                        { type: "Case", id }
+                    );
+                }
+            }
+        }
+
         return updated;
     }
 
     async delete(id: string, actorId?: string): Promise<boolean> {
         const existing = await caseRepository.getById(id);
         if (!existing) throw new HttpException(404, "Case not found");
+
+        const [fileCount, folderCount, requestCount, eventCount, invoiceCount, messageCount, taskCount] =
+            await Promise.all([
+                CaseFileModel.countDocuments({ case: id }),
+                CaseFolderModel.countDocuments({ case: id }),
+                DocumentRequestModel.countDocuments({ case: id }),
+                CalendarEventModel.countDocuments({ case: id }),
+                InvoiceModel.countDocuments({ case: id }),
+                MessageModel.countDocuments({ case: id }),
+                TaskModel.countDocuments({ case: id }),
+            ]);
+        const dependents = fileCount + folderCount + requestCount + eventCount + invoiceCount + messageCount + taskCount;
+        if (dependents > 0) {
+            throw new HttpException(
+                400,
+                `Cannot delete this case — it has ${fileCount} document(s), ${folderCount} folder(s), ${requestCount} document request(s), ${eventCount} calendar event(s), ${invoiceCount} invoice(s), ${messageCount} message(s), and ${taskCount} task(s) still linked to it.`
+            );
+        }
+
         const deleted = await caseRepository.delete(id);
         if (deleted && actorId) {
             await logAudit({

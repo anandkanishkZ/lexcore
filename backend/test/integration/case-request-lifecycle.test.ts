@@ -163,4 +163,74 @@ describe("case request lifecycle (submit -> approve/reject)", () => {
         expect(mine.body.data).toHaveLength(1);
         expect(mine.body.data[0].title).toBe("A's matter");
     });
+
+    it("concurrent approve calls on the same request create only one Case (regression: was a read-then-write race)", async () => {
+        const { token: clientToken } = await createUserAndToken({
+            userType: "client",
+            role: "user",
+            email: "race-client@lexcore.local",
+        });
+        const { token: adminToken } = await createUserAndToken({ role: "admin" });
+
+        const submitted = await request(app)
+            .post("/api/v1/case-requests")
+            .set("Authorization", `Bearer ${clientToken}`)
+            .send({ title: "Race condition test", type: "other", description: "desc", phone: "1" });
+        const requestId = submitted.body.data._id;
+
+        const [first, second] = await Promise.all([
+            request(app).post(`/api/v1/case-requests/${requestId}/approve`).set("Authorization", `Bearer ${adminToken}`).send({}),
+            request(app).post(`/api/v1/case-requests/${requestId}/approve`).set("Authorization", `Bearer ${adminToken}`).send({}),
+        ]);
+
+        const statuses = [first.status, second.status].sort();
+        expect(statuses).toEqual([200, 400]);
+
+        const caseCount = await CaseModel.countDocuments({ title: "Race condition test" });
+        expect(caseCount).toBe(1);
+    });
+
+    it("notifies the client in-app when their request is approved, not just by email", async () => {
+        const { token: clientToken } = await createUserAndToken({
+            userType: "client",
+            role: "user",
+            email: "notify-approve@lexcore.local",
+        });
+        const { token: adminToken } = await createUserAndToken({ role: "admin" });
+
+        const submitted = await request(app)
+            .post("/api/v1/case-requests")
+            .set("Authorization", `Bearer ${clientToken}`)
+            .send({ title: "Notify me", type: "other", description: "desc", phone: "1" });
+
+        await request(app)
+            .post(`/api/v1/case-requests/${submitted.body.data._id}/approve`)
+            .set("Authorization", `Bearer ${adminToken}`)
+            .send({});
+
+        const notifications = await request(app).get("/api/v1/notifications").set("Authorization", `Bearer ${clientToken}`);
+        expect(notifications.status).toBe(200);
+        const approvalNotice = notifications.body.data.notifications.find((n: any) => n.title === "Case request approved");
+        expect(approvalNotice).toBeTruthy();
+    });
+
+    it("rejects a duplicate pending request with the same title", async () => {
+        const { token: clientToken } = await createUserAndToken({
+            userType: "client",
+            role: "user",
+            email: "dedup-client@lexcore.local",
+        });
+
+        const first = await request(app)
+            .post("/api/v1/case-requests")
+            .set("Authorization", `Bearer ${clientToken}`)
+            .send({ title: "Duplicate title", type: "other", description: "desc", phone: "1" });
+        expect(first.status).toBe(201);
+
+        const second = await request(app)
+            .post("/api/v1/case-requests")
+            .set("Authorization", `Bearer ${clientToken}`)
+            .send({ title: "Duplicate title", type: "other", description: "desc", phone: "1" });
+        expect(second.status).toBe(400);
+    });
 });

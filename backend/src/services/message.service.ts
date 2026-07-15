@@ -4,6 +4,7 @@ import { NotificationService } from "./notification.service";
 import { SendMessageDTO } from "../dtos/message.dto";
 import { IMessage } from "../models/message.model";
 import { ICase } from "../models/case.model";
+import { HttpException } from "../exceptions/http-exception";
 import { sendMail } from "../utils/mail.util";
 import { getIo } from "../socket/io-instance";
 import { isOnline } from "../socket/presence";
@@ -15,9 +16,15 @@ const notificationService = new NotificationService();
 type RequestingUser = { role: string; email: string; userId: string };
 
 export class MessageService {
+    /** History stays readable after a case closes — only new writes are
+     * blocked (see send() below) — so this intentionally has no status
+     * check. Marks every message from the other party as read: readAt was
+     * declared on the schema but nothing used to set it. */
     async getHistory(caseId: string, requestingUser: RequestingUser): Promise<IMessage[]> {
         await caseService.assertChatAccess(caseId, requestingUser);
-        return messageRepository.getHistory(caseId);
+        const history = await messageRepository.getHistory(caseId);
+        await messageRepository.markReadForCase(caseId, requestingUser.userId);
+        return history;
     }
 
     /**
@@ -28,6 +35,9 @@ export class MessageService {
      */
     async send(caseId: string, data: SendMessageDTO, requestingUser: RequestingUser): Promise<IMessage> {
         const found = await caseService.assertChatAccess(caseId, requestingUser);
+        if (found.status === "closed") {
+            throw new HttpException(400, "This case is closed — new messages can't be sent, but the history is still readable.");
+        }
 
         const created = await messageRepository.create({
             case: caseId as any,

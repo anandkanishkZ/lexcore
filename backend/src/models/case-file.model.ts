@@ -19,7 +19,7 @@ export interface ICaseFile extends Document {
 
 const CaseFileMongoSchema = new Schema<ICaseFile>(
     {
-        name: { type: String, required: true },
+        name: { type: String, required: true, maxlength: 255 },
         case: { type: Schema.Types.ObjectId, ref: "Case", required: true },
         folder: { type: Schema.Types.ObjectId, ref: "CaseFolder" },
         mimeType: { type: String, required: true },

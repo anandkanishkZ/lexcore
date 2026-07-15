@@ -53,6 +53,7 @@ export class DocumentRequestController {
             const updated = await documentRequestService.fulfill(req.params.id as string, parsed.data, {
                 role: user.role,
                 email: user.email,
+                userId: user._id.toString(),
             });
             return ApiResponseHelper.success(res, updated, "Document request fulfilled", 200);
         } catch (error: any) {

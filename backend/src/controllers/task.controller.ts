@@ -49,7 +49,11 @@ export class TaskController {
             if (!parsed.success) {
                 return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
             }
-            const updated = await taskService.update(req.params.id as string, parsed.data);
+            const user = req.user as IUser;
+            const updated = await taskService.update(req.params.id as string, parsed.data, {
+                role: user.role,
+                userId: user._id.toString(),
+            });
             return ApiResponseHelper.success(res, updated, "Task updated successfully", 200);
         } catch (error: any) {
             return handleControllerError(res, error, "TaskController");
@@ -58,7 +62,8 @@ export class TaskController {
 
     async delete(req: Request, res: Response) {
         try {
-            await taskService.delete(req.params.id as string);
+            const user = req.user as IUser;
+            await taskService.delete(req.params.id as string, { role: user.role, userId: user._id.toString() });
             return ApiResponseHelper.success(res, null, "Task deleted successfully", 200);
         } catch (error: any) {
             return handleControllerError(res, error, "TaskController");

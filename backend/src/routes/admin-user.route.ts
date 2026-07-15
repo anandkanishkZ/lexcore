@@ -12,6 +12,7 @@ adminUserRouter.get("/:id", adminUserController.getById);
 adminUserRouter.post("/", adminUserController.create);
 adminUserRouter.put("/:id", adminUserController.update);
 adminUserRouter.patch("/:id", adminUserController.update);
+adminUserRouter.patch("/:id/status", adminUserController.setActive);
 adminUserRouter.delete("/:id", adminUserController.remove);
 
 export default adminUserRouter;

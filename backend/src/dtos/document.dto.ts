@@ -1,8 +1,13 @@
 import { z } from "zod";
 
+// Generous but bounded — well past any real filename/folder name, just
+// closing off an unbounded write (nothing enforced this server-side before).
+const NAME_MAX_LENGTH = 255;
+const nameSchema = (label: string) => z.string().min(1, `${label} is required`).max(NAME_MAX_LENGTH, `${label} is too long`);
+
 export const CreateFolderDTO = z.object({
     case: z.string().min(1, "Case is required"),
-    name: z.string().min(1, "Folder name is required"),
+    name: nameSchema("Folder name"),
     parent: z.string().optional(),
 });
 export type CreateFolderDTO = z.infer<typeof CreateFolderDTO>;
@@ -12,7 +17,7 @@ export type CreateFolderDTO = z.infer<typeof CreateFolderDTO>;
 // means "move to the case root", distinct from omitting the key ("don't
 // change the current location").
 export const UpdateFileDTO = z.object({
-    name: z.string().min(1, "Name is required").optional(),
+    name: nameSchema("Name").optional(),
     folder: z.string().nullable().optional(),
     starred: z.boolean().optional(),
 });
@@ -20,7 +25,7 @@ export type UpdateFileDTO = z.infer<typeof UpdateFileDTO>;
 
 // PATCH /documents/folders/:id — same shape, but folders nest under `parent`.
 export const UpdateFolderDTO = z.object({
-    name: z.string().min(1, "Name is required").optional(),
+    name: nameSchema("Name").optional(),
     parent: z.string().nullable().optional(),
     starred: z.boolean().optional(),
 });

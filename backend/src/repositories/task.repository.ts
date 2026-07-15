@@ -29,7 +29,7 @@ export class TaskMongoRepository {
     async getById(id: string): Promise<ITask | null> {
         return TaskModel.findById(id)
             .populate("assignee", "firstName lastName email")
-            .populate("case", "title caseNumber")
+            .populate("case", "title caseNumber assignedAttorney")
             .populate("createdBy", "firstName lastName");
     }
 

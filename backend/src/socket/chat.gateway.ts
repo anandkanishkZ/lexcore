@@ -33,7 +33,13 @@ export function initChatGateway(io: Server): void {
 
     io.on("connection", (socket: Socket) => {
         const user = socket.data.user;
-        let joinedCaseId: string | null = null;
+        // A Set, not a single caseId — a socket that ever joined more than
+        // one case's room without disconnecting used to leak the first
+        // case's presence entry forever (only the last-joined caseId was
+        // ever cleaned up on disconnect). Idempotent against a duplicate
+        // "join" for the same case too, so a re-emitted join on the same
+        // still-open socket doesn't double-increment the presence count.
+        const joinedCaseIds = new Set<string>();
 
         socket.on("join", async ({ caseId }: { caseId: string }) => {
             try {
@@ -43,8 +49,10 @@ export function initChatGateway(io: Server): void {
                     userId: user._id.toString(),
                 });
                 socket.join(`case:${caseId}`);
-                joinedCaseId = caseId;
-                markOnline(caseId, user._id.toString());
+                if (!joinedCaseIds.has(caseId)) {
+                    joinedCaseIds.add(caseId);
+                    markOnline(caseId, user._id.toString());
+                }
             } catch (error: any) {
                 socket.emit("error", { message: error.message || "Access denied" });
             }
@@ -66,7 +74,7 @@ export function initChatGateway(io: Server): void {
         });
 
         socket.on("disconnect", () => {
-            if (joinedCaseId) markOffline(joinedCaseId, user._id.toString());
+            for (const caseId of joinedCaseIds) markOffline(caseId, user._id.toString());
         });
     });
 }

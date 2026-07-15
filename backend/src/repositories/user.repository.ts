@@ -1,5 +1,6 @@
 import { UserModel, IUser } from "../models/user.model";
 import { escapeRegex } from "../utils/regex.util";
+import { normalizeEmail } from "../utils/email.util";
 
 export interface UserQuery {
     page: number;
@@ -15,6 +16,9 @@ export interface IUserRepository {
     getAll(query: UserQuery): Promise<{ data: IUser[]; total: number }>;
     update(id: string, user: Partial<IUser>): Promise<IUser | null>;
     delete(id: string): Promise<boolean>;
+    setPasswordResetToken(id: string, hash: string, expiresAt: Date): Promise<void>;
+    getUserByResetTokenHash(hash: string): Promise<IUser | null>;
+    clearPasswordResetToken(id: string): Promise<void>;
 }
 
 export class UserMongoRepository implements IUserRepository {
@@ -23,7 +27,10 @@ export class UserMongoRepository implements IUserRepository {
     }
 
     async getUserByEmail(email: string): Promise<IUser | null> {
-        return await UserModel.findOne({ email });
+        // Normalized so "Jane@Firm.com" and "jane@firm.com" resolve to the
+        // same account — see createUser/update below, which normalize on
+        // write, but this also covers any pre-existing mixed-case rows.
+        return await UserModel.findOne({ email: normalizeEmail(email) });
     }
 
     async getUserByUsername(username: string): Promise<IUser | null> {
@@ -31,7 +38,7 @@ export class UserMongoRepository implements IUserRepository {
     }
 
     async createUser(user: Partial<IUser>): Promise<IUser> {
-        return await UserModel.create(user);
+        return await UserModel.create({ ...user, email: user.email ? normalizeEmail(user.email) : user.email });
     }
 
     async getAll(query: UserQuery): Promise<{ data: IUser[]; total: number }> {
@@ -57,11 +64,24 @@ export class UserMongoRepository implements IUserRepository {
     }
 
     async update(id: string, user: Partial<IUser>): Promise<IUser | null> {
-        return await UserModel.findByIdAndUpdate(id, user, { new: true });
+        const payload = user.email ? { ...user, email: normalizeEmail(user.email) } : user;
+        return await UserModel.findByIdAndUpdate(id, payload, { new: true });
     }
 
     async delete(id: string): Promise<boolean> {
         const deleted = await UserModel.findByIdAndDelete(id);
         return !!deleted;
+    }
+
+    async setPasswordResetToken(id: string, hash: string, expiresAt: Date): Promise<void> {
+        await UserModel.findByIdAndUpdate(id, { passwordResetTokenHash: hash, passwordResetExpiresAt: expiresAt });
+    }
+
+    async getUserByResetTokenHash(hash: string): Promise<IUser | null> {
+        return await UserModel.findOne({ passwordResetTokenHash: hash });
+    }
+
+    async clearPasswordResetToken(id: string): Promise<void> {
+        await UserModel.findByIdAndUpdate(id, { passwordResetTokenHash: null, passwordResetExpiresAt: null });
     }
 }

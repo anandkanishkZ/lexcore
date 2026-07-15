@@ -2,6 +2,8 @@ import request from "supertest";
 import app from "../../src/app";
 import { createUserAndToken } from "../helpers";
 import { ClientModel } from "../../src/models/client.model";
+import { FileShareModel } from "../../src/models/file-share.model";
+import { FileVersionModel } from "../../src/models/file-version.model";
 
 async function makeLinkedClientAndCase(adminToken: string) {
     const { token: clientToken, user: clientUser } = await createUserAndToken({
@@ -110,7 +112,8 @@ describe("file sharing (DMS collaboration)", () => {
         const { token: adminToken } = await createUserAndToken({ role: "admin" });
         const { clientToken, caseId } = await makeLinkedClientAndCase(adminToken);
         const fileId = await uploadFile(clientToken, caseId);
-        const email = `repeat-${Date.now()}@lexcore.local`;
+        const { user: recipient } = await createUserAndToken({ userType: "client" });
+        const email = recipient.email;
 
         await request(app).post(`/api/v1/documents/${fileId}/share`).set("Authorization", `Bearer ${clientToken}`).send({ email, role: "viewer" });
         await request(app).post(`/api/v1/documents/${fileId}/share`).set("Authorization", `Bearer ${clientToken}`).send({ email, role: "editor" });
@@ -210,5 +213,69 @@ describe("file versioning (DMS collaboration)", () => {
 
         const history = await request(app).get(`/api/v1/documents/${fileId}/versions`).set("Authorization", `Bearer ${clientToken}`);
         expect(history.body.data.map((v: any) => v.versionNumber)).toEqual([2, 1]);
+    });
+});
+
+describe("document upload/share edge cases", () => {
+    it("rejects sharing a file with an email that has no Lexcore account", async () => {
+        const { token: adminToken } = await createUserAndToken({ role: "admin" });
+        const { clientToken, caseId } = await makeLinkedClientAndCase(adminToken);
+        const fileId = await uploadFile(clientToken, caseId);
+
+        const res = await request(app)
+            .post(`/api/v1/documents/${fileId}/share`)
+            .set("Authorization", `Bearer ${clientToken}`)
+            .send({ email: "nobody-registered@lexcore.local", role: "viewer" });
+        expect(res.status).toBe(400);
+    });
+
+    it("rejects an empty (0-byte) file upload", async () => {
+        const { token: adminToken } = await createUserAndToken({ role: "admin" });
+        const { clientToken, caseId } = await makeLinkedClientAndCase(adminToken);
+
+        const res = await request(app)
+            .post(`/api/v1/documents?case=${caseId}`)
+            .set("Authorization", `Bearer ${clientToken}`)
+            .attach("file", Buffer.alloc(0), "empty.pdf");
+        expect(res.status).toBe(400);
+    });
+
+    it("permanently deleting a folder cleans up its files' shares and versions, not just the files", async () => {
+        const { token: adminToken } = await createUserAndToken({ role: "admin" });
+        const { clientToken, caseId } = await makeLinkedClientAndCase(adminToken);
+        const { user: recipient } = await createUserAndToken({ userType: "client" });
+
+        const folder = await request(app)
+            .post("/api/v1/documents/folders")
+            .set("Authorization", `Bearer ${clientToken}`)
+            .send({ case: caseId, name: "Cascade test folder" });
+        const folderId = folder.body.data._id;
+
+        const upload = await request(app)
+            .post(`/api/v1/documents?case=${caseId}&folder=${folderId}`)
+            .set("Authorization", `Bearer ${clientToken}`)
+            .attach("file", Buffer.from("v1 content"), "cascade.pdf");
+        const fileId = upload.body.data._id;
+
+        await request(app)
+            .post(`/api/v1/documents/${fileId}/versions`)
+            .set("Authorization", `Bearer ${clientToken}`)
+            .attach("file", Buffer.from("v2 content"), "cascade-v2.pdf");
+        await request(app)
+            .post(`/api/v1/documents/${fileId}/share`)
+            .set("Authorization", `Bearer ${clientToken}`)
+            .send({ email: recipient.email, role: "viewer" });
+
+        const del = await request(app)
+            .delete(`/api/v1/documents/folders/${folderId}/permanent`)
+            .set("Authorization", `Bearer ${clientToken}`);
+        expect(del.status).toBe(200);
+
+        // The file itself is gone, so its shares/versions can't be listed via
+        // the API anymore — check the underlying collections directly.
+        const remainingShares = await FileShareModel.countDocuments({ file: fileId });
+        const remainingVersions = await FileVersionModel.countDocuments({ file: fileId });
+        expect(remainingShares).toBe(0);
+        expect(remainingVersions).toBe(0);
     });
 });

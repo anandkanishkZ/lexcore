@@ -16,6 +16,11 @@ const notificationService = new NotificationService();
 
 export class CaseRequestService {
     async create(data: CreateCaseRequestDTO, requestedByUserId: string): Promise<ICaseRequest> {
+        const isDuplicate = await caseRequestRepository.hasPendingWithTitle(requestedByUserId, data.title);
+        if (isDuplicate) {
+            throw new HttpException(400, "You already have a pending request with this title — wait for it to be reviewed before submitting another.");
+        }
+
         const created = await caseRequestRepository.create({
             requestedBy: requestedByUserId as any,
             title: data.title,
@@ -61,12 +66,26 @@ export class CaseRequestService {
      * its case-number-generation logic.
      */
     async approve(id: string, staffUserId: string, data: ApproveCaseRequestDTO): Promise<ICaseRequest> {
-        const request = await caseRequestRepository.getById(id);
-        if (!request) throw new HttpException(404, "Case request not found");
-        if (request.status !== "pending") throw new HttpException(400, "This request has already been reviewed");
+        // Atomically claim the request out of "pending" FIRST — a plain
+        // read-then-write here let two concurrent approvals (a double-click,
+        // or two staff triaging at once) both pass the pending check before
+        // either wrote, each creating its own real Case from the same
+        // request. Only one findOneAndUpdate({status:"pending"}) can ever
+        // succeed; the loser gets null back before doing anything else.
+        const request = await caseRequestRepository.updateIfPending(id, {
+            status: "approved",
+            reviewedBy: staffUserId as any,
+            reviewNote: data.reviewNote,
+        });
+        if (!request) {
+            const existing = await caseRequestRepository.getById(id);
+            if (!existing) throw new HttpException(404, "Case request not found");
+            throw new HttpException(400, "This request has already been reviewed");
+        }
 
-        // getById populates requestedBy, so it's a subdocument here, not a raw
-        // ObjectId — extract its _id rather than .toString()-ing the document.
+        // getById/updateIfPending populate requestedBy, so it's a
+        // subdocument here, not a raw ObjectId — extract its _id rather
+        // than .toString()-ing the document.
         const requestedById = (request.requestedBy as unknown as { _id: { toString(): string } })._id.toString();
         const requester = await userRepository.getUserById(requestedById);
         if (!requester) throw new HttpException(404, "Requesting user not found");
@@ -104,12 +123,10 @@ export class CaseRequestService {
             staffUserId
         );
 
-        const updated = await caseRequestRepository.update(id, {
-            status: "approved",
-            reviewedBy: staffUserId as any,
-            reviewNote: data.reviewNote,
-            resultingCase: createdCase._id,
-        });
+        // The request is already claimed (status/reviewedBy/reviewNote set
+        // atomically above) — this second write only attaches the case that
+        // resulted from it, so a plain update (not updateIfPending) is fine.
+        const updated = await caseRequestRepository.update(id, { resultingCase: createdCase._id });
         if (!updated) throw new HttpException(500, "Failed to update case request");
 
         await logAudit({
@@ -119,29 +136,45 @@ export class CaseRequestService {
             entityId: id,
             metadata: `${request.title} → ${createdCase.caseNumber}`,
         });
+
+        const approvalMessage = `Good news — your request "${request.title}" was approved. Your case number is ${createdCase.caseNumber}.`;
+        await notificationService.notifyUser(requester._id.toString(), "Case request approved", approvalMessage, {
+            type: "Case",
+            id: createdCase._id.toString(),
+        });
         await sendMail(
             requester.email,
             "Your case request was approved",
-            `Good news — your request "${request.title}" was approved. Your case number is ${createdCase.caseNumber}. ` +
-                `You can view it in the Lexcore app under My Cases.`
+            `${approvalMessage} You can view it in the Lexcore app under My Cases.`
         );
+
+        if (data.assignedAttorney) {
+            await notificationService.notifyUser(
+                data.assignedAttorney,
+                "New case assigned to you",
+                `You've been assigned as attorney on "${createdCase.title}" (${createdCase.caseNumber}).`,
+                { type: "Case", id: createdCase._id.toString() }
+            );
+        }
+
         return updated;
     }
 
     async reject(id: string, staffUserId: string, data: RejectCaseRequestDTO): Promise<ICaseRequest> {
-        const request = await caseRequestRepository.getById(id);
-        if (!request) throw new HttpException(404, "Case request not found");
-        if (request.status !== "pending") throw new HttpException(400, "This request has already been reviewed");
-
-        const requestedById = (request.requestedBy as unknown as { _id: { toString(): string } })._id.toString();
-        const requester = await userRepository.getUserById(requestedById);
-
-        const updated = await caseRequestRepository.update(id, {
+        // Same atomic-claim-first reasoning as approve() above.
+        const updated = await caseRequestRepository.updateIfPending(id, {
             status: "rejected",
             reviewedBy: staffUserId as any,
             reviewNote: data.reviewNote,
         });
-        if (!updated) throw new HttpException(500, "Failed to update case request");
+        if (!updated) {
+            const existing = await caseRequestRepository.getById(id);
+            if (!existing) throw new HttpException(404, "Case request not found");
+            throw new HttpException(400, "This request has already been reviewed");
+        }
+
+        const requestedById = (updated.requestedBy as unknown as { _id: { toString(): string } })._id.toString();
+        const requester = await userRepository.getUserById(requestedById);
 
         await logAudit({
             actorId: staffUserId,
@@ -151,11 +184,12 @@ export class CaseRequestService {
             metadata: data.reviewNote,
         });
         if (requester) {
-            await sendMail(
-                requester.email,
-                "Update on your case request",
-                `Your request "${request.title}" was not approved. Reason: ${data.reviewNote}`
-            );
+            const rejectionMessage = `Your request "${updated.title}" was not approved. Reason: ${data.reviewNote}`;
+            await notificationService.notifyUser(requester._id.toString(), "Case request update", rejectionMessage, {
+                type: "CaseRequest",
+                id: id,
+            });
+            await sendMail(requester.email, "Update on your case request", rejectionMessage);
         }
         return updated;
     }

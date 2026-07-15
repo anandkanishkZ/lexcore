@@ -19,6 +19,11 @@ export const CORS_ORIGINS: string[] = (process.env.CORS_ORIGIN || "http://localh
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+// The web console's own origin, used to build links that must open in a
+// browser (currently just the password-reset email) — distinct from
+// CORS_ORIGIN, which can be a comma-separated allowlist.
+export const FRONTEND_URL: string = process.env.FRONTEND_URL || "http://localhost:3000";
+
 export const SMTP_HOST: string | undefined = process.env.SMTP_HOST || undefined;
 export const SMTP_PORT: number = Number(process.env.SMTP_PORT) || 587;
 export const SMTP_USER: string | undefined = process.env.SMTP_USER || undefined;

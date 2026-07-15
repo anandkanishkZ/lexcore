@@ -49,7 +49,8 @@ export class CalendarEventController {
             if (!parsed.success) {
                 return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
             }
-            const updated = await calendarEventService.update(req.params.id as string, parsed.data);
+            const actorId = (req.user as IUser)._id.toString();
+            const updated = await calendarEventService.update(req.params.id as string, parsed.data, actorId);
             return ApiResponseHelper.success(res, updated, "Event updated successfully", 200);
         } catch (error: any) {
             return handleControllerError(res, error, "CalendarEventController");
@@ -58,7 +59,8 @@ export class CalendarEventController {
 
     async delete(req: Request, res: Response) {
         try {
-            await calendarEventService.delete(req.params.id as string);
+            const actorId = (req.user as IUser)._id.toString();
+            await calendarEventService.delete(req.params.id as string, actorId);
             return ApiResponseHelper.success(res, null, "Event deleted successfully", 200);
         } catch (error: any) {
             return handleControllerError(res, error, "CalendarEventController");

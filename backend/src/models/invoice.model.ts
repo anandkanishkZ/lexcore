@@ -23,8 +23,11 @@ export interface IInvoice extends Document {
     paidAmount: number;
     // "overdue" is deliberately not a stored value here — it's derived at
     // read time from status !== "paid" && dueDate < now, so it can never go
-    // stale or need a cron job to flip it.
-    status: "draft" | "sent" | "paid";
+    // stale or need a cron job to flip it. "void" is a non-destructive
+    // alternative to deleting a wrong/cancelled invoice — see
+    // InvoiceService.voidInvoice — that preserves the audit trail instead of
+    // erasing the record (and any payments already recorded against it).
+    status: "draft" | "sent" | "paid" | "void";
     dueDate: Date;
     notes: string;
     createdBy: mongoose.Types.ObjectId;
@@ -53,7 +56,7 @@ const InvoiceMongoSchema = new Schema<IInvoice>(
         tax: { type: Number, required: true, min: 0 },
         total: { type: Number, required: true, min: 0 },
         paidAmount: { type: Number, default: 0, min: 0 },
-        status: { type: String, enum: ["draft", "sent", "paid"], default: "draft" },
+        status: { type: String, enum: ["draft", "sent", "paid", "void"], default: "draft" },
         dueDate: { type: Date, required: true },
         notes: { type: String, default: "" },
         createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },

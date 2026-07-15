@@ -68,12 +68,14 @@ export class ClientController {
     async delete(req: Request, res: Response) {
         try {
             const id = req.params.id as string;
+            const target = await clientService.getById(id);
             await clientService.delete(id);
             await logAudit({
                 actorId: (req.user as IUser)._id.toString(),
                 action: "client.delete",
                 entityType: "Client",
                 entityId: id,
+                metadata: `${target.firstName} ${target.lastName} <${target.email}>`,
             });
             return ApiResponseHelper.success(res, null, "Client deleted successfully", 200);
         } catch (error: any) {

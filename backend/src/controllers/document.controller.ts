@@ -6,12 +6,13 @@ import { IUser } from "../models/user.model";
 import { ApiResponseHelper } from "../utils/apihelper.util";
 import { handleControllerError } from "../utils/error-handler.util";
 import { FileListFilters } from "../repositories/case-file.repository";
+import { logAudit } from "../utils/audit-log.util";
 
 const documentService = new DocumentService();
 
 function requestingUser(req: Request) {
     const user = req.user as IUser;
-    return { role: user.role, email: user.email };
+    return { role: user.role, email: user.email, userId: user._id.toString() };
 }
 
 function userId(req: Request) {
@@ -101,6 +102,13 @@ export class DocumentController {
             const folder = (req.query.folder as string) || undefined;
 
             const created = await documentService.recordUpload(req.file, caseId, folder, userId(req));
+            await logAudit({
+                actorId: userId(req),
+                action: "document.upload",
+                entityType: "CaseFile",
+                entityId: created._id.toString(),
+                metadata: created.name,
+            });
             return ApiResponseHelper.success(res, created, "File uploaded successfully", 201);
         } catch (error: any) {
             return handleControllerError(res, error, "DocumentController");
@@ -110,6 +118,13 @@ export class DocumentController {
     async download(req: Request, res: Response) {
         try {
             const file = await documentService.getFileForDownload(String(req.params.id), requestingUser(req));
+            await logAudit({
+                actorId: userId(req),
+                action: "document.download",
+                entityType: "CaseFile",
+                entityId: file._id.toString(),
+                metadata: file.name,
+            });
             res.setHeader("Content-Type", file.mimeType);
             res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(file.name)}"`);
             fs.createReadStream(file.storagePath).pipe(res);
@@ -133,6 +148,13 @@ export class DocumentController {
                 userId(req),
                 requestingUser(req)
             );
+            await logAudit({
+                actorId: userId(req),
+                action: "document.share",
+                entityType: "CaseFile",
+                entityId: String(req.params.id),
+                metadata: `${parsed.data.email} (${parsed.data.role})`,
+            });
             return ApiResponseHelper.success(res, share, "File shared successfully", 201);
         } catch (error: any) {
             return handleControllerError(res, error, "DocumentController");
@@ -151,6 +173,13 @@ export class DocumentController {
     async revokeShare(req: Request, res: Response) {
         try {
             await documentService.revokeShare(String(req.params.id), String(req.params.shareId), requestingUser(req));
+            await logAudit({
+                actorId: userId(req),
+                action: "document.revoke-share",
+                entityType: "CaseFile",
+                entityId: String(req.params.id),
+                metadata: String(req.params.shareId),
+            });
             return ApiResponseHelper.success(res, null, "Share revoked", 200);
         } catch (error: any) {
             return handleControllerError(res, error, "DocumentController");
@@ -168,6 +197,13 @@ export class DocumentController {
                 userId(req),
                 requestingUser(req)
             );
+            await logAudit({
+                actorId: userId(req),
+                action: "document.upload-version",
+                entityType: "CaseFile",
+                entityId: String(req.params.id),
+                metadata: updated.name,
+            });
             return ApiResponseHelper.success(res, updated, "New version uploaded successfully", 201);
         } catch (error: any) {
             return handleControllerError(res, error, "DocumentController");
@@ -276,6 +312,12 @@ export class DocumentController {
     async permanentlyDeleteFile(req: Request, res: Response) {
         try {
             await documentService.permanentlyDeleteFile(String(req.params.id), requestingUser(req));
+            await logAudit({
+                actorId: userId(req),
+                action: "document.permanent-delete",
+                entityType: "CaseFile",
+                entityId: String(req.params.id),
+            });
             return ApiResponseHelper.success(res, null, "File permanently deleted", 200);
         } catch (error: any) {
             return handleControllerError(res, error, "DocumentController");
@@ -285,6 +327,12 @@ export class DocumentController {
     async permanentlyDeleteFolder(req: Request, res: Response) {
         try {
             await documentService.permanentlyDeleteFolder(String(req.params.id), requestingUser(req));
+            await logAudit({
+                actorId: userId(req),
+                action: "document.permanent-delete-folder",
+                entityType: "CaseFolder",
+                entityId: String(req.params.id),
+            });
             return ApiResponseHelper.success(res, null, "Folder permanently deleted", 200);
         } catch (error: any) {
             return handleControllerError(res, error, "DocumentController");

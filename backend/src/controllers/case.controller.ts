@@ -31,7 +31,11 @@ export class CaseController {
     async getById(req: Request, res: Response) {
         try {
             const user = req.user as IUser;
-            const found = await caseService.getById(req.params.id as string, { role: user.role, email: user.email });
+            const found = await caseService.getById(req.params.id as string, {
+                role: user.role,
+                email: user.email,
+                userId: user._id.toString(),
+            });
             return ApiResponseHelper.success(res, found, "Case fetched successfully", 200);
         } catch (error: any) {
             return handleControllerError(res, error, "CaseController");

@@ -2,8 +2,12 @@ import { ClientMongoRepository, ClientQuery } from "../repositories/client.repos
 import { CreateClientDTO, UpdateClientDTO } from "../dtos/client.dto";
 import { IClient } from "../models/client.model";
 import { HttpException } from "../exceptions/http-exception";
+import { CaseModel } from "../models/case.model";
+import { InvoiceModel } from "../models/invoice.model";
+import { UserMongoRepository } from "../repositories/user.repository";
 
 const clientRepository = new ClientMongoRepository();
+const userRepository = new UserMongoRepository();
 
 export class ClientService {
     async getAll(query: ClientQuery): Promise<{ data: IClient[]; total: number }> {
@@ -23,7 +27,15 @@ export class ClientService {
         if (existing) {
             throw new HttpException(400, "Client with this email already exists");
         }
-        return await clientRepository.create({ ...data, createdBy: userId as any });
+        // A person can already have a portal login (User) before ever
+        // getting a CRM record — e.g. they self-registered but no case has
+        // been opened for them yet. Auto-link rather than silently creating
+        // a second, disconnected record for the same person — the same
+        // linking CaseRequestService.approve() already does when a case
+        // request resolves to an existing account.
+        const existingUser = await userRepository.getUserByEmail(data.email);
+        const linkedUserId = existingUser ? (existingUser._id.toString() as any) : undefined;
+        return await clientRepository.create({ ...data, createdBy: userId as any, linkedUserId });
     }
 
     async update(id: string, data: UpdateClientDTO): Promise<IClient> {
@@ -51,6 +63,18 @@ export class ClientService {
         if (!client) {
             throw new HttpException(404, "Client not found");
         }
+
+        const [caseCount, invoiceCount] = await Promise.all([
+            CaseModel.countDocuments({ client: id }),
+            InvoiceModel.countDocuments({ client: id }),
+        ]);
+        if (caseCount > 0 || invoiceCount > 0) {
+            throw new HttpException(
+                400,
+                `Cannot delete this client — ${caseCount} case(s) and ${invoiceCount} invoice(s) are still linked to them`
+            );
+        }
+
         return await clientRepository.delete(id);
     }
 }

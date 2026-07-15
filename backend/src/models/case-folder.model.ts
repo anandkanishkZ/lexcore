@@ -15,7 +15,7 @@ export interface ICaseFolder extends Document {
 
 const CaseFolderMongoSchema = new Schema<ICaseFolder>(
     {
-        name: { type: String, required: true },
+        name: { type: String, required: true, maxlength: 255 },
         case: { type: Schema.Types.ObjectId, ref: "Case", required: true },
         parent: { type: Schema.Types.ObjectId, ref: "CaseFolder" },
         createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },

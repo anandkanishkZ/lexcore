@@ -12,4 +12,14 @@ export class MessageMongoRepository {
             .sort({ createdAt: 1 })
             .limit(500);
     }
+
+    /** Marks every message in the case NOT sent by `readerId` as read — see
+     * MessageService.getHistory, called whenever the other party fetches the
+     * thread. `readAt` was declared on the schema but nothing ever set it. */
+    async markReadForCase(caseId: string, readerId: string): Promise<void> {
+        await MessageModel.updateMany(
+            { case: caseId, sender: { $ne: readerId }, readAt: { $exists: false } },
+            { $set: { readAt: new Date() } }
+        );
+    }
 }

@@ -15,7 +15,7 @@ const fileRepository = new CaseFileMongoRepository();
 const caseService = new CaseService();
 const notificationService = new NotificationService();
 
-type RequestingUser = { role: string; email: string };
+type RequestingUser = { role: string; email: string; userId: string };
 
 export class DocumentRequestService {
     /**
@@ -124,6 +124,22 @@ export class DocumentRequestService {
             entityId: id,
             metadata: found.title,
         });
+
+        // Same notify+email pattern create() uses — a pending ask shouldn't
+        // silently vanish from the client's list with no explanation.
+        const caseId = (found.case as unknown as { _id: { toString(): string } })._id.toString();
+        const relatedCase = await caseRepository.getById(caseId);
+        const client = relatedCase?.client as unknown as { email: string; linkedUserId?: { toString(): string } } | null;
+        if (client) {
+            const message = `${relatedCase?.caseNumber}: the request for "${found.title}" was cancelled — you no longer need to upload it.`;
+            if (client.linkedUserId) {
+                await notificationService.notifyUser(client.linkedUserId.toString(), "Document request cancelled", message, {
+                    type: "DocumentRequest",
+                    id,
+                });
+            }
+            await sendMail(client.email, "Document request cancelled", message);
+        }
 
         return updated;
     }

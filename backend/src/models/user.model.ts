@@ -4,6 +4,16 @@ import { UserType } from "../types/user.type";
 export interface IUser extends UserType, Document {
     _id: mongoose.Types.ObjectId;
     profileImage?: string;
+    // True unless deactivated by an admin — see UserService.setActive. A
+    // deactivated account still exists (so historical case/task/invoice
+    // references stay resolvable) but can no longer log in.
+    isActive: boolean;
+    // Set by forgotPassword, consumed and cleared by resetPassword. Only the
+    // sha256 hash of the raw token is ever stored — see
+    // utils/password-reset.util.ts — so a database read alone can't produce
+    // a usable reset link.
+    passwordResetTokenHash?: string;
+    passwordResetExpiresAt?: Date;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -16,6 +26,9 @@ const UserMongoSchema: Schema = new Schema<IUser>(
         userType: { type: String, required: true, enum: ["client", "attorney", "lawyer", "advocate", "paralegal", "judge", "legal consultant"] },
         password: { type: String, required: true },
         role: { type: String, enum: ["admin", "user"], default: "user" },
+        isActive: { type: Boolean, default: true },
+        passwordResetTokenHash: { type: String },
+        passwordResetExpiresAt: { type: Date },
         // Relative path to the uploaded avatar, e.g. "/uploads/profile-<id>.jpg".
         profileImage: { type: String, default: "" },
     },
@@ -36,6 +49,7 @@ export interface PublicUser {
     email: string;
     userType: string;
     role: string;
+    isActive: boolean;
     profileImage: string;
     createdAt: Date;
     updatedAt: Date;
@@ -48,6 +62,7 @@ export const toPublicUser = (user: IUser): PublicUser => ({
     email: user.email,
     userType: user.userType,
     role: user.role,
+    isActive: user.isActive,
     profileImage: user.profileImage ?? "",
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,

@@ -24,7 +24,7 @@ async function requireCaseQueryAccess(req: Request, res: Response, next: NextFun
         const caseId = (req.query.case as string) || "";
         if (!caseId) return ApiResponseHelper.error(res, "case is required", 400);
         const user = req.user as IUser;
-        await caseService.assertAccess(caseId, { role: user.role, email: user.email });
+        await caseService.assertAccess(caseId, { role: user.role, email: user.email, userId: user._id.toString() });
 
         const folderId = req.query.folder as string | undefined;
         if (folderId) {

@@ -154,4 +154,63 @@ describe("case messaging (client <-> assigned staff)", () => {
             .send({ content: "" });
         expect(res.status).toBe(400);
     });
+
+    it("rejects a whitespace-only message", async () => {
+        const { token: adminToken } = await createUserAndToken({ role: "admin" });
+        const { clientToken, caseId } = await makeLinkedClientAndCase(adminToken);
+
+        const res = await request(app)
+            .post(`/api/v1/messages?case=${caseId}`)
+            .set("Authorization", `Bearer ${clientToken}`)
+            .send({ content: "    \t  " });
+        expect(res.status).toBe(400);
+    });
+
+    it("blocks sending a new message on a closed case but keeps history readable", async () => {
+        const { token: adminToken } = await createUserAndToken({ role: "admin" });
+        const { clientToken, caseId } = await makeLinkedClientAndCase(adminToken);
+
+        await request(app)
+            .post(`/api/v1/messages?case=${caseId}`)
+            .set("Authorization", `Bearer ${clientToken}`)
+            .send({ content: "Before closing" });
+
+        await request(app).put(`/api/v1/cases/${caseId}`).set("Authorization", `Bearer ${adminToken}`).send({ status: "closed" });
+
+        const blocked = await request(app)
+            .post(`/api/v1/messages?case=${caseId}`)
+            .set("Authorization", `Bearer ${clientToken}`)
+            .send({ content: "After closing" });
+        expect(blocked.status).toBe(400);
+
+        const history = await request(app)
+            .get(`/api/v1/messages?case=${caseId}`)
+            .set("Authorization", `Bearer ${clientToken}`);
+        expect(history.status).toBe(200);
+        expect(history.body.data).toHaveLength(1);
+    });
+
+    it("marks the other party's messages as read when history is fetched", async () => {
+        const { token: adminToken } = await createUserAndToken({ role: "admin" });
+        const { token: attorneyToken, user: attorneyUser } = await createUserAndToken({
+            userType: "attorney",
+            role: "user",
+        });
+        const { clientToken, caseId } = await makeLinkedClientAndCase(adminToken, attorneyUser._id.toString());
+
+        const sent = await request(app)
+            .post(`/api/v1/messages?case=${caseId}`)
+            .set("Authorization", `Bearer ${clientToken}`)
+            .send({ content: "Please read this" });
+        expect(sent.body.data.readAt).toBeFalsy();
+
+        // The attorney (the other party) fetches history — that's what
+        // should mark the client's message as read.
+        await request(app).get(`/api/v1/messages?case=${caseId}`).set("Authorization", `Bearer ${attorneyToken}`);
+
+        const reFetched = await request(app)
+            .get(`/api/v1/messages?case=${caseId}`)
+            .set("Authorization", `Bearer ${clientToken}`);
+        expect(reFetched.body.data[0].readAt).toBeTruthy();
+    });
 });

@@ -2,6 +2,7 @@ import { CalendarEventMongoRepository, CalendarEventQuery } from "../repositorie
 import { CreateCalendarEventDTO, UpdateCalendarEventDTO } from "../dtos/calendar-event.dto";
 import { ICalendarEvent } from "../models/calendar-event.model";
 import { HttpException } from "../exceptions/http-exception";
+import { logAudit } from "../utils/audit-log.util";
 
 const calendarEventRepository = new CalendarEventMongoRepository();
 
@@ -31,7 +32,7 @@ export class CalendarEventService {
         });
     }
 
-    async update(id: string, data: UpdateCalendarEventDTO): Promise<ICalendarEvent> {
+    async update(id: string, data: UpdateCalendarEventDTO, actorId?: string): Promise<ICalendarEvent> {
         const existing = await calendarEventRepository.getById(id);
         if (!existing) throw new HttpException(404, "Event not found");
 
@@ -41,12 +42,21 @@ export class CalendarEventService {
 
         const updated = await calendarEventRepository.update(id, updatePayload);
         if (!updated) throw new HttpException(500, "Failed to update event");
+
+        if (actorId) {
+            await logAudit({ actorId, action: "calendar-event.update", entityType: "CalendarEvent", entityId: id, metadata: existing.title });
+        }
+
         return updated;
     }
 
-    async delete(id: string): Promise<boolean> {
+    async delete(id: string, actorId?: string): Promise<boolean> {
         const existing = await calendarEventRepository.getById(id);
         if (!existing) throw new HttpException(404, "Event not found");
-        return calendarEventRepository.delete(id);
+        const deleted = await calendarEventRepository.delete(id);
+        if (deleted && actorId) {
+            await logAudit({ actorId, action: "calendar-event.delete", entityType: "CalendarEvent", entityId: id, metadata: existing.title });
+        }
+        return deleted;
     }
 }

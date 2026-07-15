@@ -46,3 +46,53 @@ describe("task assignee validation", () => {
         expect(res.body.data.assignee).toBe(attorneyUser._id.toString());
     });
 });
+
+describe("task mutation access scoping", () => {
+    it("rejects a staff member editing another staff member's task on a case they're not assigned to", async () => {
+        const { token: creatorToken, user: creator } = await createUserAndToken({ userType: "attorney" });
+        const { token: otherToken } = await createUserAndToken({ userType: "attorney" });
+
+        const created = await request(app)
+            .post("/api/v1/tasks")
+            .set("Authorization", `Bearer ${creatorToken}`)
+            .send({ title: "Not yours", assignee: creator._id.toString() });
+        const taskId = created.body.data._id;
+
+        const res = await request(app)
+            .put(`/api/v1/tasks/${taskId}`)
+            .set("Authorization", `Bearer ${otherToken}`)
+            .send({ title: "Hijacked" });
+        expect(res.status).toBe(403);
+    });
+
+    it("allows the task's assignee to edit it even if they didn't create it", async () => {
+        const { token: creatorToken } = await createUserAndToken({ userType: "attorney" });
+        const { token: assigneeToken, user: assignee } = await createUserAndToken({ userType: "paralegal" });
+
+        const created = await request(app)
+            .post("/api/v1/tasks")
+            .set("Authorization", `Bearer ${creatorToken}`)
+            .send({ title: "Assigned to someone else", assignee: assignee._id.toString() });
+
+        const res = await request(app)
+            .put(`/api/v1/tasks/${created.body.data._id}`)
+            .set("Authorization", `Bearer ${assigneeToken}`)
+            .send({ status: "in_progress" });
+        expect(res.status).toBe(200);
+    });
+
+    it("allows an admin to edit any task regardless of assignment", async () => {
+        const { token: creatorToken, user: creator } = await createUserAndToken({ userType: "attorney" });
+        const { token: adminToken } = await createUserAndToken({ role: "admin" });
+
+        const created = await request(app)
+            .post("/api/v1/tasks")
+            .set("Authorization", `Bearer ${creatorToken}`)
+            .send({ title: "Admin override", assignee: creator._id.toString() });
+
+        const res = await request(app)
+            .delete(`/api/v1/tasks/${created.body.data._id}`)
+            .set("Authorization", `Bearer ${adminToken}`);
+        expect(res.status).toBe(200);
+    });
+});

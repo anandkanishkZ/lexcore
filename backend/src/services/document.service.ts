@@ -16,7 +16,7 @@ import { UserMongoRepository } from "../repositories/user.repository";
 import { NotificationService } from "./notification.service";
 import { sendMail } from "../utils/mail.util";
 
-type RequestingUser = { role: string; email: string };
+type RequestingUser = { role: string; email: string; userId: string };
 
 const folderRepository = new CaseFolderMongoRepository();
 const fileRepository = new CaseFileMongoRepository();
@@ -82,6 +82,13 @@ export class DocumentService {
     ): Promise<ICaseFile> {
         // Ownership is already enforced by requireCaseQueryAccess before multer
         // ever touches disk (see document.route.ts) — no re-check needed here.
+        // multer's fileFilter can't see the size (streaming hasn't started
+        // yet), so a 0-byte file is only catchable here, after the write.
+        if (file.size === 0) {
+            fs.unlink(file.path, () => {});
+            throw new HttpException(400, "That file is empty");
+        }
+
         const extraction = await extractTextSafely(file.path, file.mimetype);
         const created = await fileRepository.create({
             name: file.originalname,
@@ -130,17 +137,27 @@ export class DocumentService {
         if (!file) throw new HttpException(404, "File not found");
         await caseService.assertAccess(file.case.toString(), requestingUser);
 
+        // A share granted to an email with no Lexcore account is a dead end
+        // — there's no guest-access route, so redeeming a share requires
+        // signing in as an existing account with a matching email. Reject
+        // up front with an actionable message instead of silently emailing
+        // a promise of access the recipient has no way to claim.
+        const recipient = await userRepository.getUserByEmail(email);
+        if (!recipient) {
+            throw new HttpException(
+                400,
+                "This person doesn't have a Lexcore account yet — they'll need to register before you can share a file with them."
+            );
+        }
+
         const share = await fileShareRepository.upsert(fileId, email, role, userId);
 
-        const recipient = await userRepository.getUserByEmail(email);
         const subject = `You've been given ${role} access to "${file.name}"`;
         const body = `You can now ${role === "editor" ? "view and upload new versions of" : "view"} "${file.name}" in Lexcore.`;
-        if (recipient) {
-            await notificationService.notifyUser(recipient._id.toString(), "File shared with you", subject, {
-                type: "CaseFile",
-                id: fileId,
-            });
-        }
+        await notificationService.notifyUser(recipient._id.toString(), "File shared with you", subject, {
+            type: "CaseFile",
+            id: fileId,
+        });
         await sendMail(email, subject, body);
 
         return share;
@@ -177,6 +194,11 @@ export class DocumentService {
         const existing = await fileRepository.getById(fileId);
         if (!existing) throw new HttpException(404, "File not found");
         await this.assertCanEditFile(existing, requestingUser);
+
+        if (file.size === 0) {
+            fs.unlink(file.path, () => {});
+            throw new HttpException(400, "That file is empty");
+        }
 
         const nextVersionNumber = (await fileVersionRepository.countByFile(fileId)) + 1;
         // Snapshot the state being replaced, then extract fresh text for the
@@ -405,8 +427,20 @@ export class DocumentService {
         if (!file) throw new HttpException(404, "File not found");
         await caseService.assertAccess(file.case.toString(), requestingUser);
 
+        // Read every prior version's storagePath before the FileVersion rows
+        // are removed below — each version has its own physical blob
+        // (recordNewVersion never overwrites one in place), so deleting only
+        // the DB rows would leak every superseded version's file on disk.
+        const versions = await fileVersionRepository.listByFile(id);
+
         await fileRepository.hardDelete(id);
         await Promise.all([fileShareRepository.removeAllForFile(id), fileVersionRepository.removeAllForFile(id)]);
+
+        for (const version of versions) {
+            fs.unlink(version.storagePath, () => {
+                // Best-effort — see the identical comment pattern this mirrors below.
+            });
+        }
         fs.unlink(file.storagePath, () => {
             // Best-effort — see the identical comment pattern this mirrors below.
         });
@@ -418,9 +452,27 @@ export class DocumentService {
         await caseService.assertAccess(folder.case.toString(), requestingUser);
 
         const folderIds = await folderRepository.getDescendantFolderIds(id);
+        const filesInFolders = await fileRepository.listByFolderIds(folderIds);
+        const fileIds = filesInFolders.map((f) => f._id.toString());
+        // Same reasoning as permanentlyDeleteFile above — without this, every
+        // file inside a permanently-deleted folder leaves its FileShare and
+        // FileVersion rows (and every version's on-disk blob) orphaned,
+        // since only the single-file delete path used to clean these up.
+        const allVersions = (await Promise.all(fileIds.map((fileId) => fileVersionRepository.listByFile(fileId)))).flat();
+
         const deletedFiles = await fileRepository.hardDeleteByFolderIds(folderIds);
         await folderRepository.hardDeleteMany(folderIds);
+        await Promise.all([
+            ...fileIds.map((fileId) => fileShareRepository.removeAllForFile(fileId)),
+            ...fileIds.map((fileId) => fileVersionRepository.removeAllForFile(fileId)),
+        ]);
 
+        for (const version of allVersions) {
+            fs.unlink(version.storagePath, () => {
+                // Best-effort: the DB records are already gone, so a lingering
+                // orphaned blob on disk isn't worth failing the request over.
+            });
+        }
         for (const deletedFile of deletedFiles) {
             fs.unlink(deletedFile.storagePath, () => {
                 // Best-effort: the DB records are already gone, so a lingering
