@@ -2,11 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Printer, CreditCard, Trash2, ArrowLeft } from "lucide-react";
+import { Printer, CreditCard, Trash2, Ban, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/lib/contexts/AuthContext";
-import { deleteInvoiceAction } from "@/lib/actions/invoice";
+import { deleteInvoiceAction, voidInvoiceAction } from "@/lib/actions/invoice";
 import RecordPaymentModal from "./RecordPaymentModal";
+import InvoiceConfirmModal from "./InvoiceConfirmModal";
 import { statusStyles, statusLabel, displayStatus, paymentMethodLabel, formatCurrency } from "../../_components/constants";
 
 interface InvoiceItem {
@@ -62,22 +63,11 @@ export default function InvoiceDetailClient({
     const { user } = useAuth();
     const isAdmin = user?.role === "admin";
     const [showPaymentModal, setShowPaymentModal] = useState(false);
-    const [deleting, setDeleting] = useState(false);
+    const [confirmAction, setConfirmAction] = useState<"delete" | "void" | null>(null);
 
     const shownStatus = displayStatus(invoice.status, invoice.dueDate);
     const amountDue = Math.max(0, invoice.total - invoice.paidAmount);
-
-    const handleDelete = async () => {
-        if (!confirm(`Delete invoice ${invoice.invoiceNumber}? This cannot be undone.`)) return;
-        setDeleting(true);
-        const result = await deleteInvoiceAction(invoice._id);
-        if (result.success) {
-            router.push("/admin/billing");
-        } else {
-            setDeleting(false);
-            alert(result.message || "Failed to delete invoice");
-        }
-    };
+    const canVoid = invoice.status === "draft" || invoice.status === "sent";
 
     return (
         <div className="max-w-3xl mx-auto">
@@ -87,7 +77,7 @@ export default function InvoiceDetailClient({
                     Back to invoices
                 </Link>
                 <div className="flex items-center gap-2">
-                    {invoice.status !== "paid" && (
+                    {invoice.status !== "paid" && invoice.status !== "void" && (
                         <button
                             onClick={() => setShowPaymentModal(true)}
                             className="flex items-center gap-2 rounded-lg bg-brand-gold px-4 py-2.5 text-sm font-medium text-white hover:bg-[#a3853a] transition"
@@ -103,12 +93,20 @@ export default function InvoiceDetailClient({
                         <Printer className="w-4 h-4" />
                         Print
                     </button>
+                    {canVoid && (
+                        <button
+                            onClick={() => setConfirmAction("void")}
+                            title="Void invoice — a non-destructive alternative to deleting, keeps the record and any payment history"
+                            className="p-2.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition"
+                        >
+                            <Ban className="w-4 h-4" />
+                        </button>
+                    )}
                     {isAdmin && (
                         <button
-                            onClick={handleDelete}
-                            disabled={deleting}
+                            onClick={() => setConfirmAction("delete")}
                             title="Delete invoice"
-                            className="p-2.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition disabled:opacity-50"
+                            className="p-2.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition"
                         >
                             <Trash2 className="w-4 h-4" />
                         </button>
@@ -238,6 +236,44 @@ export default function InvoiceDetailClient({
                     onClose={() => setShowPaymentModal(false)}
                     onSuccess={() => {
                         setShowPaymentModal(false);
+                        router.refresh();
+                    }}
+                />
+            )}
+
+            {confirmAction === "delete" && (
+                <InvoiceConfirmModal
+                    title="Delete invoice"
+                    message={
+                        <>
+                            Are you sure you want to delete <span className="font-medium text-slate-900">{invoice.invoiceNumber}</span>?
+                            This action cannot be undone.
+                        </>
+                    }
+                    confirmLabel="Delete"
+                    danger
+                    action={() => deleteInvoiceAction(invoice._id)}
+                    onClose={() => setConfirmAction(null)}
+                    onSuccess={() => router.push("/admin/billing")}
+                />
+            )}
+
+            {confirmAction === "void" && (
+                <InvoiceConfirmModal
+                    title="Void invoice"
+                    message={
+                        <>
+                            Voiding <span className="font-medium text-slate-900">{invoice.invoiceNumber}</span> keeps the record and
+                            any payment history, but it can no longer be edited or paid. Use this instead of deleting for a wrong or
+                            cancelled invoice.
+                        </>
+                    }
+                    confirmLabel="Void invoice"
+                    danger={false}
+                    action={() => voidInvoiceAction(invoice._id)}
+                    onClose={() => setConfirmAction(null)}
+                    onSuccess={() => {
+                        setConfirmAction(null);
                         router.refresh();
                     }}
                 />

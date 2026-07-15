@@ -5,6 +5,7 @@ import {
     createAdminUserApi,
     updateAdminUserApi,
     deleteAdminUserApi,
+    setAdminUserActiveApi,
 } from "../api/admin-user";
 import { getTokenCookie } from "../cookies";
 import { revalidatePath } from "next/cache";
@@ -79,5 +80,19 @@ export async function deleteAdminUserAction(id: string) {
         return result;
     } catch (error) {
         return { success: false, message: errorMessage(error, "Failed to delete user") };
+    }
+}
+
+export async function setAdminUserActiveAction(id: string, isActive: boolean) {
+    try {
+        const token = await getTokenCookie();
+        if (!token) return { success: false, message: "Not authenticated" };
+        const result = await setAdminUserActiveApi(token, id, isActive);
+        if (result.success) {
+            revalidatePath("/admin/users");
+        }
+        return result;
+    } catch (error) {
+        return { success: false, message: errorMessage(error, "Failed to update user status") };
     }
 }

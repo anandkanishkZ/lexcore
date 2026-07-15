@@ -3,6 +3,7 @@ export const statusStyles: Record<string, string> = {
     sent: "bg-blue-50 text-blue-600",
     paid: "bg-emerald-50 text-emerald-700",
     overdue: "bg-red-50 text-red-600",
+    void: "bg-slate-100 text-slate-400 line-through",
 };
 
 export const statusLabel: Record<string, string> = {
@@ -10,6 +11,7 @@ export const statusLabel: Record<string, string> = {
     sent: "Sent",
     paid: "Paid",
     overdue: "Overdue",
+    void: "Void",
 };
 
 export const paymentMethodLabel: Record<string, string> = {
@@ -23,7 +25,7 @@ export const paymentMethodLabel: Record<string, string> = {
 /** Same rule as the backend's derived "overdue" state — never stored,
  * computed at read time from status + dueDate. */
 export function displayStatus(status: string, dueDate: string): string {
-    if (status === "paid") return "paid";
+    if (status === "paid" || status === "void") return status;
     if (new Date(dueDate) < new Date()) return "overdue";
     return status;
 }

@@ -15,6 +15,7 @@ const TABS = [
     { value: "sent", label: "Sent" },
     { value: "overdue", label: "Overdue" },
     { value: "paid", label: "Paid" },
+    { value: "void", label: "Void" },
 ] as const;
 
 export default async function BillingPage({ searchParams }: PageProps) {
@@ -33,7 +34,7 @@ export default async function BillingPage({ searchParams }: PageProps) {
         : all;
 
     const outstanding = all
-        .filter((inv) => displayStatus(inv.status, inv.dueDate) !== "paid")
+        .filter((inv) => !["paid", "void"].includes(displayStatus(inv.status, inv.dueDate)))
         .reduce((sum, inv) => sum + (inv.total - inv.paidAmount), 0);
 
     return (

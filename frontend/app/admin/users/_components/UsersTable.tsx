@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { ShieldCheck, Users as UsersIcon, Eye, Pencil, Trash2 } from "lucide-react";
-import { fetchAdminUserAction } from "@/lib/actions/admin-user";
+import { useState, useTransition } from "react";
+import { ShieldCheck, Users as UsersIcon, Eye, Pencil, Trash2, UserX, UserCheck } from "lucide-react";
+import { fetchAdminUserAction, setAdminUserActiveAction } from "@/lib/actions/admin-user";
 import UserFormModal from "./UserFormModal";
 import DeleteUserModal from "./DeleteUserModal";
 import type { CreateUserFormData } from "./userSchema";
@@ -42,6 +42,21 @@ export default function UsersTable({ members }: { members: Member[] }) {
     const [editTarget, setEditTarget] = useState<{ id: string; defaults: Partial<CreateUserFormData> } | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
     const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
+    const [isPending, startTransition] = useTransition();
+    const [togglingId, setTogglingId] = useState<string | null>(null);
+
+    const toggleActive = (id: string, nextActive: boolean) => {
+        setTogglingId(id);
+        startTransition(async () => {
+            const result = await setAdminUserActiveAction(id, nextActive);
+            setTogglingId(null);
+            if (result.success) {
+                router.refresh();
+            } else {
+                alert(result.message || "Failed to update status");
+            }
+        });
+    };
 
     const openEdit = async (id: string) => {
         setLoadingEditId(id);
@@ -189,6 +204,22 @@ export default function UsersTable({ members }: { members: Member[] }) {
                                                     className="p-1.5 rounded-lg text-slate-400 hover:text-brand-gold hover:bg-slate-100 transition disabled:opacity-50"
                                                 >
                                                     <Pencil className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => toggleActive(m._id, m.status === "inactive")}
+                                                    disabled={isPending && togglingId === m._id}
+                                                    title={
+                                                        m.status === "inactive"
+                                                            ? "Reactivate — restores their ability to log in"
+                                                            : "Deactivate — the preferred alternative to deleting someone with open work assigned"
+                                                    }
+                                                    className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition disabled:opacity-50"
+                                                >
+                                                    {m.status === "inactive" ? (
+                                                        <UserCheck className="w-4 h-4" />
+                                                    ) : (
+                                                        <UserX className="w-4 h-4" />
+                                                    )}
                                                 </button>
                                                 <button
                                                     onClick={() =>

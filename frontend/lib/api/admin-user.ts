@@ -60,3 +60,12 @@ export async function deleteAdminUserApi(token: string, id: string) {
     });
     return res.json();
 }
+
+export async function setAdminUserActiveApi(token: string, id: string, isActive: boolean) {
+    const res = await fetch(`${API_URL}/api/v1/admin/users/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ isActive }),
+    });
+    return res.json();
+}

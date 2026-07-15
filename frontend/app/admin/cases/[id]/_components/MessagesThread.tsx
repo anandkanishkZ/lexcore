@@ -33,6 +33,7 @@ export default function MessagesThread({
     const [draft, setDraft] = useState("");
     const [sending, setSending] = useState(false);
     const [connected, setConnected] = useState(false);
+    const [socketError, setSocketError] = useState<string | null>(null);
     const socketRef = useRef<Socket | null>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -48,11 +49,24 @@ export default function MessagesThread({
         socket.on("message:new", (msg: MessageRow) => {
             setMessages((prev) => (prev.some((m) => m._id === msg._id) ? prev : [...prev, msg]));
         });
+        // The backend emits this on a denied join or a rejected send (e.g.
+        // access was revoked, or the case just closed) — there was no
+        // listener for it at all before, so a message could silently vanish
+        // with the composer already cleared and zero feedback.
+        socket.on("error", (payload: { message?: string }) => {
+            setSocketError(payload?.message || "Something went wrong with the connection.");
+        });
 
         return () => {
             socket.close();
         };
     }, [caseId, token]);
+
+    useEffect(() => {
+        if (!socketError) return;
+        const timer = setTimeout(() => setSocketError(null), 6000);
+        return () => clearTimeout(timer);
+    }, [socketError]);
 
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -73,6 +87,8 @@ export default function MessagesThread({
             const result = await sendMessageAction(caseId, content);
             if (result.success) {
                 setMessages((prev) => [...prev, result.data]);
+            } else {
+                setSocketError(result.message || "Couldn't send your message. Please try again.");
             }
         }
         setSending(false);
@@ -119,6 +135,12 @@ export default function MessagesThread({
                 )}
                 <div ref={bottomRef} />
             </div>
+
+            {socketError && (
+                <div className="mx-4 mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600" role="alert">
+                    {socketError}
+                </div>
+            )}
 
             <div className="flex items-center gap-2 px-4 py-3 border-t border-slate-100">
                 <input

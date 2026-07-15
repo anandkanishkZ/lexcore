@@ -7,6 +7,7 @@ import {
     createInvoiceApi,
     updateInvoiceApi,
     deleteInvoiceApi,
+    voidInvoiceApi,
     recordPaymentApi,
     type InvoicePayload,
 } from "../api/invoice";
@@ -76,6 +77,21 @@ export async function deleteInvoiceAction(id: string) {
         return result;
     } catch (error: any) {
         return { success: false, message: error.message || "Failed to delete invoice" };
+    }
+}
+
+export async function voidInvoiceAction(id: string) {
+    try {
+        const token = await getTokenCookie();
+        if (!token) return { success: false, message: "Not authenticated" };
+        const result = await voidInvoiceApi(token, id);
+        if (result.success) {
+            revalidatePath("/admin/billing");
+            revalidatePath(`/admin/billing/${id}`);
+        }
+        return result;
+    } catch (error: any) {
+        return { success: false, message: error.message || "Failed to void invoice" };
     }
 }
 

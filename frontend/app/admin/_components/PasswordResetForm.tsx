@@ -30,7 +30,8 @@ export default function PasswordResetForm() {
         startTransition(async () => {
             try {
                 const result = await handleUpdatePassword({
-                    password: data.newPassword,
+                    currentPassword: data.currentPassword,
+                    newPassword: data.newPassword,
                 });
                 if (result.success) {
                     setSuccess("Password updated successfully");

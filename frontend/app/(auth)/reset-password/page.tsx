@@ -1,6 +1,12 @@
-import ForgotPasswordForm from "@/app/(auth)/_components/ForgotPasswordForm";
+import ResetPasswordForm from "@/app/(auth)/_components/ResetPasswordForm";
 
-export default function ForgotPasswordPage() {
+interface PageProps {
+  searchParams: Promise<{ token?: string }>;
+}
+
+export default async function ResetPasswordPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+
   return (
     <div className="w-full max-w-sm">
       <div className="mb-8 text-center">
@@ -12,12 +18,10 @@ export default function ForgotPasswordPage() {
             Lexcore
           </span>
         </div>
-        <p className="text-sm text-slate-500">
-          Enter your email to receive a reset link
-        </p>
+        <p className="text-sm text-slate-500">Choose a new password</p>
       </div>
 
-      <ForgotPasswordForm />
+      <ResetPasswordForm token={params.token} />
     </div>
   );
 }

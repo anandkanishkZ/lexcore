@@ -5,7 +5,9 @@ import {
     registerApi,
     whoamiApi,
     updateProfileApi,
-    updatePasswordApi,
+    changePasswordApi,
+    forgotPasswordApi,
+    resetPasswordApi,
 } from "../api/auth";
 import {
     setTokenCookie,
@@ -86,19 +88,35 @@ export async function handleUpdateProfile(formData: FormData) {
     }
 }
 
-export async function handleUpdatePassword(data: { password: string }) {
+export async function handleUpdatePassword(data: { currentPassword: string; newPassword: string }) {
     try {
         const token = await getTokenCookie();
         if (!token) {
             return { success: false, message: "Not authenticated" };
         }
-        const result = await updatePasswordApi(token, data);
+        const result = await changePasswordApi(token, data);
         return result;
     } catch (error: any) {
         return {
             success: false,
             message: error.message || "Failed to update password",
         };
+    }
+}
+
+export async function handleForgotPassword(email: string) {
+    try {
+        return await forgotPasswordApi(email);
+    } catch (error: any) {
+        return { success: false, message: error.message || "Failed to send reset email" };
+    }
+}
+
+export async function handleResetPassword(token: string, newPassword: string) {
+    try {
+        return await resetPasswordApi(token, newPassword);
+    } catch (error: any) {
+        return { success: false, message: error.message || "Failed to reset password" };
     }
 }
 

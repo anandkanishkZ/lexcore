@@ -70,6 +70,14 @@ export async function deleteInvoiceApi(token: string, id: string) {
     return res.json();
 }
 
+export async function voidInvoiceApi(token: string, id: string) {
+    const res = await fetch(`${API_URL}/api/v1/invoices/${id}/void`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.json();
+}
+
 export async function recordPaymentApi(
     token: string,
     id: string,
