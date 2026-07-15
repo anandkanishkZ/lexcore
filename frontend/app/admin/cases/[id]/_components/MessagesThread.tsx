@@ -154,7 +154,14 @@ export default function MessagesThread({
     }, [socketError]);
 
     useEffect(() => {
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+        // block/inline "nearest" pins this to the chat panel's own
+        // overflow-y-auto container — without it, scrollIntoView is free to
+        // scroll ANY ancestor (including the whole page) to bring the
+        // target into view, which is what was actually happening here: the
+        // typing indicator toggling on/off rapidly was yanking the outer
+        // page's scroll position around on every change, showing up as a
+        // blank area opening and closing rather than a real layout bug.
+        bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
     }, [messages, typingUser]);
 
     const handleSend = async () => {
