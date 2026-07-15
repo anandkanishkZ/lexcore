@@ -1,5 +1,6 @@
 import { ClientModel } from "../models/client.model";
 import { UserModel } from "../models/user.model";
+import { escapeRegex } from "../utils/regex.util";
 
 export interface MemberQuery {
     page: number;
@@ -58,9 +59,9 @@ export class MemberMongoRepository {
         const searchMatch = search
             ? {
                   $or: [
-                      { firstName: { $regex: search, $options: "i" } },
-                      { lastName: { $regex: search, $options: "i" } },
-                      { email: { $regex: search, $options: "i" } },
+                      { firstName: { $regex: escapeRegex(search), $options: "i" } },
+                      { lastName: { $regex: escapeRegex(search), $options: "i" } },
+                      { email: { $regex: escapeRegex(search), $options: "i" } },
                   ],
               }
             : {};

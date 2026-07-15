@@ -1,4 +1,5 @@
 import { UserModel, IUser } from "../models/user.model";
+import { escapeRegex } from "../utils/regex.util";
 
 export interface UserQuery {
     page: number;
@@ -39,10 +40,11 @@ export class UserMongoRepository implements IUserRepository {
 
         const filter: any = {};
         if (search) {
+            const pattern = escapeRegex(search);
             filter.$or = [
-                { firstName: { $regex: search, $options: "i" } },
-                { lastName: { $regex: search, $options: "i" } },
-                { email: { $regex: search, $options: "i" } },
+                { firstName: { $regex: pattern, $options: "i" } },
+                { lastName: { $regex: pattern, $options: "i" } },
+                { email: { $regex: pattern, $options: "i" } },
             ];
         }
 

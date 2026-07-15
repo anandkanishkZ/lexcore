@@ -1,4 +1,5 @@
 import { ClientModel, IClient } from "../models/client.model";
+import { escapeRegex } from "../utils/regex.util";
 
 export interface ClientQuery {
     page: number;
@@ -13,11 +14,12 @@ export class ClientMongoRepository {
 
         const filter: any = {};
         if (search) {
+            const pattern = escapeRegex(search);
             filter.$or = [
-                { firstName: { $regex: search, $options: "i" } },
-                { lastName: { $regex: search, $options: "i" } },
-                { email: { $regex: search, $options: "i" } },
-                { companyName: { $regex: search, $options: "i" } },
+                { firstName: { $regex: pattern, $options: "i" } },
+                { lastName: { $regex: pattern, $options: "i" } },
+                { email: { $regex: pattern, $options: "i" } },
+                { companyName: { $regex: pattern, $options: "i" } },
             ];
         }
 

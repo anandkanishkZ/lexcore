@@ -90,6 +90,11 @@ export class InvoiceController {
 
     async listPayments(req: Request, res: Response) {
         try {
+            const user = req.user as IUser;
+            await invoiceService.assertAccess(req.params.id as string, {
+                role: user.role,
+                email: user.email,
+            });
             const data = await invoiceService.listPayments(req.params.id as string);
             return ApiResponseHelper.success(res, data, "Payments fetched successfully", 200);
         } catch (error: any) {

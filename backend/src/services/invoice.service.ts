@@ -4,6 +4,7 @@ import { IInvoice, IInvoiceItem } from "../models/invoice.model";
 import { IPayment } from "../models/payment.model";
 import { HttpException } from "../exceptions/http-exception";
 import { logAudit } from "../utils/audit-log.util";
+import { retryOnDuplicateKey } from "../utils/retry-unique.util";
 
 const invoiceRepository = new InvoiceMongoRepository();
 
@@ -52,29 +53,33 @@ export class InvoiceService {
     }
 
     async create(data: CreateInvoiceDTO, userId: string): Promise<IInvoice> {
-        const total = await invoiceRepository.countAll();
-        const year = new Date().getFullYear();
-        const invoiceNumber = `INV-${year}-${String(total + 1).padStart(4, "0")}`;
-
         const { items, subtotal, tax, total: totalAmount } = computeTotals(
             data.items as { description: string; quantity: number; rate: number }[],
             data.taxRate
         );
 
-        return invoiceRepository.create({
-            invoiceNumber,
-            client: data.client as any,
-            case: data.case ? (data.case as any) : undefined,
-            items,
-            taxRate: data.taxRate,
-            subtotal,
-            tax,
-            total: totalAmount,
-            paidAmount: 0,
-            status: data.status ?? "draft",
-            dueDate: new Date(data.dueDate),
-            notes: data.notes ?? "",
-            createdBy: userId as any,
+        // See CaseService.create's comment on retryOnDuplicateKey — same
+        // count-then-format-then-insert race on the invoiceNumber unique index.
+        return retryOnDuplicateKey(async () => {
+            const total = await invoiceRepository.countAll();
+            const year = new Date().getFullYear();
+            const invoiceNumber = `INV-${year}-${String(total + 1).padStart(4, "0")}`;
+
+            return invoiceRepository.create({
+                invoiceNumber,
+                client: data.client as any,
+                case: data.case ? (data.case as any) : undefined,
+                items,
+                taxRate: data.taxRate,
+                subtotal,
+                tax,
+                total: totalAmount,
+                paidAmount: 0,
+                status: data.status ?? "draft",
+                dueDate: new Date(data.dueDate),
+                notes: data.notes ?? "",
+                createdBy: userId as any,
+            });
         });
     }
 
@@ -139,17 +144,27 @@ export class InvoiceService {
         if (!invoice) throw new HttpException(404, "Invoice not found");
         if (invoice.status === "paid") throw new HttpException(400, "This invoice is already fully paid");
 
-        const paymentCount = await invoiceRepository.countPayments();
-        const receiptNumber = `RCPT-${new Date().getFullYear()}-${String(paymentCount + 1).padStart(4, "0")}`;
+        const remaining = Math.round((invoice.total - invoice.paidAmount) * 100) / 100;
+        if (data.amount > remaining) {
+            throw new HttpException(400, `Payment of ${data.amount} exceeds the remaining balance of ${remaining}`);
+        }
 
-        await invoiceRepository.createPayment({
-            invoice: invoiceId as any,
-            amount: data.amount,
-            method: data.method,
-            date: data.date ? new Date(data.date) : new Date(),
-            receiptNumber,
-            notes: data.notes ?? "",
-            recordedBy: userId as any,
+        // See CaseService.create's comment on retryOnDuplicateKey — same
+        // count-then-format-then-insert race, here on the receiptNumber
+        // unique index.
+        await retryOnDuplicateKey(async () => {
+            const paymentCount = await invoiceRepository.countPayments();
+            const receiptNumber = `RCPT-${new Date().getFullYear()}-${String(paymentCount + 1).padStart(4, "0")}`;
+
+            return invoiceRepository.createPayment({
+                invoice: invoiceId as any,
+                amount: data.amount,
+                method: data.method,
+                date: data.date ? new Date(data.date) : new Date(),
+                receiptNumber,
+                notes: data.notes ?? "",
+                recordedBy: userId as any,
+            });
         });
 
         const paidAmount = await invoiceRepository.sumPayments(invoiceId);

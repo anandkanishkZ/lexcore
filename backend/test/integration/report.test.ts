@@ -110,6 +110,32 @@ describe("reports (staff-only canned aggregates)", () => {
             expect(byMonth[key(oneMonthAgo)]).toBe(0);
         });
 
+        it("attributes a payment at the exact UTC month boundary to the correct month", async () => {
+            // Regression guard: revenueByMonth's $match/zero-fill range used to
+            // be computed with local-time Date methods while $dateToString
+            // buckets in UTC — on any server whose local timezone isn't UTC, a
+            // payment dated right at a local month boundary was silently
+            // dropped from its bucket or mislabeled into the adjacent one. A
+            // payment at the exact first instant of the current UTC month
+            // must land in that month regardless of what local timezone the
+            // test machine happens to run in.
+            const { token, user: admin } = await createUserAndToken({ role: "admin" });
+            const client = await makeClient(admin._id.toString());
+            const invoice = await makeInvoice(client._id.toString(), admin._id.toString());
+
+            const now = new Date();
+            const boundary = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
+            await makePayment(invoice._id.toString(), admin._id.toString(), 75, boundary);
+
+            const res = await request(app)
+                .get("/api/v1/reports/revenue-by-month?months=1")
+                .set("Authorization", `Bearer ${token}`);
+            expect(res.status).toBe(200);
+
+            const key = `${boundary.getUTCFullYear()}-${String(boundary.getUTCMonth() + 1).padStart(2, "0")}`;
+            expect(res.body.data).toEqual([{ month: key, total: 75 }]);
+        });
+
         it("rejects an out-of-range months value", async () => {
             const { token } = await createUserAndToken({ role: "admin" });
             const res = await request(app)

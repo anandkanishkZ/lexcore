@@ -1,5 +1,6 @@
 import { CaseModel, ICase } from "../models/case.model";
 import { ClientModel } from "../models/client.model";
+import { escapeRegex } from "../utils/regex.util";
 
 export interface CaseQuery {
     page: number;
@@ -16,10 +17,11 @@ export class CaseMongoRepository {
 
         const filter: any = {};
         if (search) {
+            const pattern = escapeRegex(search);
             filter.$or = [
-                { title: { $regex: search, $options: "i" } },
-                { caseNumber: { $regex: search, $options: "i" } },
-                { description: { $regex: search, $options: "i" } },
+                { title: { $regex: pattern, $options: "i" } },
+                { caseNumber: { $regex: pattern, $options: "i" } },
+                { description: { $regex: pattern, $options: "i" } },
             ];
         }
         if (status) filter.status = status;

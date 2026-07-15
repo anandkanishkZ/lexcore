@@ -161,6 +161,70 @@ describe("invoices", () => {
         expect(otherMine.body.data).toHaveLength(0);
     });
 
+    it("a client cannot read another client's payment history by invoice id", async () => {
+        // Regression guard: GET /:id/payments used to skip the ownership
+        // check that GET /:id already enforces, so a client could read
+        // another client's payment amounts/methods/recorder just by
+        // guessing/enumerating an invoice id.
+        const { token: adminToken, user: admin } = await createUserAndToken({ role: "admin" });
+        const ownerEmail = "invoice-pay-owner@lexcore.local";
+        const otherEmail = "invoice-pay-other@lexcore.local";
+        const { token: ownerToken } = await createUserAndToken({ userType: "client", role: "user", email: ownerEmail });
+        const { token: otherToken } = await createUserAndToken({ userType: "client", role: "user", email: otherEmail });
+
+        const client = await makeClient(admin._id.toString(), ownerEmail);
+        const created = await request(app)
+            .post("/api/v1/invoices")
+            .set("Authorization", `Bearer ${adminToken}`)
+            .send({ client: client._id.toString(), items: [{ description: "Fee", quantity: 1, rate: 100 }], dueDate: "2026-12-31" });
+        const invoiceId = created.body.data._id;
+
+        await request(app)
+            .post(`/api/v1/invoices/${invoiceId}/payments`)
+            .set("Authorization", `Bearer ${adminToken}`)
+            .send({ amount: 25, method: "cash" });
+
+        const ownerPayments = await request(app)
+            .get(`/api/v1/invoices/${invoiceId}/payments`)
+            .set("Authorization", `Bearer ${ownerToken}`);
+        expect(ownerPayments.status).toBe(200);
+        expect(ownerPayments.body.data).toHaveLength(1);
+
+        const otherPayments = await request(app)
+            .get(`/api/v1/invoices/${invoiceId}/payments`)
+            .set("Authorization", `Bearer ${otherToken}`);
+        expect(otherPayments.status).toBe(403);
+    });
+
+    it("rejects a payment that would exceed the invoice's remaining balance", async () => {
+        const { token, user: admin } = await createUserAndToken({ role: "admin" });
+        const client = await makeClient(admin._id.toString());
+
+        const created = await request(app)
+            .post("/api/v1/invoices")
+            .set("Authorization", `Bearer ${token}`)
+            .send({ client: client._id.toString(), items: [{ description: "Fee", quantity: 1, rate: 100 }], dueDate: "2026-12-31" });
+        const invoiceId = created.body.data._id;
+
+        const overpay = await request(app)
+            .post(`/api/v1/invoices/${invoiceId}/payments`)
+            .set("Authorization", `Bearer ${token}`)
+            .send({ amount: 150, method: "cash" });
+        expect(overpay.status).toBe(400);
+
+        const partial = await request(app)
+            .post(`/api/v1/invoices/${invoiceId}/payments`)
+            .set("Authorization", `Bearer ${token}`)
+            .send({ amount: 60, method: "cash" });
+        expect(partial.status).toBe(201);
+
+        const remainderExceeded = await request(app)
+            .post(`/api/v1/invoices/${invoiceId}/payments`)
+            .set("Authorization", `Bearer ${token}`)
+            .send({ amount: 50, method: "cash" });
+        expect(remainderExceeded.status).toBe(400);
+    });
+
     it("RBAC: non-admin staff can create/list but not delete; admin can delete", async () => {
         const { token: adminToken, user: admin } = await createUserAndToken({ role: "admin" });
         const { token: staffToken } = await createUserAndToken({ userType: "paralegal", role: "user" });

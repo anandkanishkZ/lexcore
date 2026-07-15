@@ -4,6 +4,7 @@ import { CreateCaseDTO, UpdateCaseDTO } from "../dtos/case.dto";
 import { ICase } from "../models/case.model";
 import { HttpException } from "../exceptions/http-exception";
 import { logAudit } from "../utils/audit-log.util";
+import { retryOnDuplicateKey } from "../utils/retry-unique.util";
 
 const caseRepository = new CaseMongoRepository();
 const userRepository = new UserMongoRepository();
@@ -91,21 +92,28 @@ export class CaseService {
     async create(data: CreateCaseDTO, userId: string): Promise<ICase> {
         if (data.assignedAttorney) await this.assertValidAttorney(data.assignedAttorney);
 
-        const total = await caseRepository.countAll();
-        const year = new Date().getFullYear();
-        const caseNumber = `CASE-${year}-${String(total + 1).padStart(4, "0")}`;
+        // count-then-format-then-insert races under concurrent creates (two
+        // requests can read the same count before either inserts) and the
+        // caseNumber unique index rejects the loser with a raw duplicate-key
+        // error — retried here with a fresh count each attempt instead of
+        // surfacing a 500 for what's really just a collision.
+        return retryOnDuplicateKey(async () => {
+            const total = await caseRepository.countAll();
+            const year = new Date().getFullYear();
+            const caseNumber = `CASE-${year}-${String(total + 1).padStart(4, "0")}`;
 
-        return caseRepository.create({
-            title: data.title,
-            caseNumber,
-            type: data.type,
-            status: data.status ?? "open",
-            description: data.description ?? "",
-            client: data.client as any,
-            assignedAttorney: data.assignedAttorney ? (data.assignedAttorney as any) : undefined,
-            openDate: data.openDate ? new Date(data.openDate) : new Date(),
-            closeDate: data.closeDate ? new Date(data.closeDate) : undefined,
-            createdBy: userId as any,
+            return caseRepository.create({
+                title: data.title,
+                caseNumber,
+                type: data.type,
+                status: data.status ?? "open",
+                description: data.description ?? "",
+                client: data.client as any,
+                assignedAttorney: data.assignedAttorney ? (data.assignedAttorney as any) : undefined,
+                openDate: data.openDate ? new Date(data.openDate) : new Date(),
+                closeDate: data.closeDate ? new Date(data.closeDate) : undefined,
+                createdBy: userId as any,
+            });
         });
     }
 

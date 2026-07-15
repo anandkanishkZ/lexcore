@@ -1,4 +1,5 @@
 import { CaseFileModel, ICaseFile } from "../models/case-file.model";
+import { escapeRegex } from "../utils/regex.util";
 
 export interface FileListFilters {
     search?: string;
@@ -6,12 +7,6 @@ export interface FileListFilters {
     type?: string;
     sortBy?: "name" | "size" | "createdAt";
     sortOrder?: "asc" | "desc";
-}
-
-/** Escapes regex metacharacters so a search term can never be read as a
- * pattern (guards against both a crash on malformed input and ReDoS). */
-function escapeRegex(value: string): string {
-    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function buildTypeFilter(type: string): Record<string, unknown> | null {

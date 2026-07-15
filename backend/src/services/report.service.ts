@@ -29,10 +29,17 @@ export class ReportService {
     async revenueByMonth(months: number = DEFAULT_REVENUE_MONTHS): Promise<RevenueByMonthResult> {
         const clampedMonths = Math.min(Math.max(months, 1), MAX_REVENUE_MONTHS);
 
+        // Bucketing is done entirely in UTC — both this range and the
+        // zero-fill below — to match $dateToString's default UTC bucketing
+        // in the aggregation below. Mixing local-time Date methods (which
+        // follow the server process's OS timezone) with UTC aggregation
+        // caused payments near a local month boundary to be silently
+        // dropped from their correct month, or mislabeled into the
+        // adjacent one, on any non-UTC-deployed server.
         const since = new Date();
-        since.setDate(1);
-        since.setHours(0, 0, 0, 0);
-        since.setMonth(since.getMonth() - (clampedMonths - 1));
+        since.setUTCDate(1);
+        since.setUTCHours(0, 0, 0, 0);
+        since.setUTCMonth(since.getUTCMonth() - (clampedMonths - 1));
 
         // Payment, not Invoice.status — Payment.date/amount is the actual
         // collected-cash ledger; Invoice.paidAmount is only a cache derived
@@ -47,9 +54,9 @@ export class ReportService {
         const result: RevenueByMonthResult = [];
         const cursor = new Date(since);
         for (let i = 0; i < clampedMonths; i++) {
-            const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`;
+            const key = `${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, "0")}`;
             result.push({ month: key, total: totals.get(key) ?? 0 });
-            cursor.setMonth(cursor.getMonth() + 1);
+            cursor.setUTCMonth(cursor.getUTCMonth() + 1);
         }
         return result;
     }

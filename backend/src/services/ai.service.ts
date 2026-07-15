@@ -133,6 +133,13 @@ export class AiService {
         query: string,
         history: { role: "user" | "assistant"; content: string }[]
     ): Promise<{ answer: string }> {
+        // No requestingUser/file-access check — same "any staff, unscoped"
+        // visibility as search()/ask()/summarizeCase() above. Per-matter
+        // confidentiality between staff (an "Ethical Wall") is explicit
+        // deferred scope for this project (see PROJECT_PLAN.md's Deferred /
+        // Out of Scope section) — until that exists, restricting this one
+        // endpoint while search()/ask() stay firm-wide would be an
+        // inconsistent, false sense of scoping rather than real protection.
         const file = await fileRepository.getById(fileId);
         if (!file) throw new HttpException(404, "Document not found");
         if (!file.extractedText) {
@@ -155,6 +162,7 @@ export class AiService {
     }
 
     async summarizeDocument(fileId: string): Promise<{ summary: string }> {
+        // Same "any staff, unscoped" visibility as chatAboutDocument above.
         const file = await fileRepository.getById(fileId);
         if (!file) throw new HttpException(404, "Document not found");
         if (!file.extractedText) {

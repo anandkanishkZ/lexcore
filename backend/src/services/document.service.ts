@@ -55,6 +55,12 @@ export class DocumentService {
             folderRepository.listByCase(caseId, folderId ?? null),
             fileRepository.listByCase(caseId, folderId ?? null, filters),
         ]);
+        // getById above trusts the raw folder id alone — without this check a
+        // caller with access to caseId could pass a folder belonging to a
+        // different case and read its name/breadcrumb via the response.
+        if (folderId && (!folder || folder.case.toString() !== caseId)) {
+            throw new HttpException(404, "Folder not found");
+        }
         return { folder, breadcrumb, folders, files };
     }
 
