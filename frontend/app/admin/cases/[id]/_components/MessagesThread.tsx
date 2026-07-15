@@ -19,6 +19,44 @@ function formatTime(iso: string) {
     return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
 
+// Three-dot "typing…" indicator, animated entirely in JS via inline styles —
+// deliberately not a CSS keyframe/Tailwind utility. A prior version used
+// Tailwind's `[animation-delay:-0.3s]` arbitrary-property syntax, the only
+// place in the codebase using it, and it broke the page's generated
+// stylesheet the moment it rendered (this project runs Tailwind CSS 4,
+// which parses arbitrary values differently than v3). This has zero
+// dependency on how any CSS gets generated, so it can't repeat that failure
+// mode regardless of Tailwind version.
+function TypingDots() {
+    const [tick, setTick] = useState(0);
+    useEffect(() => {
+        const interval = setInterval(() => setTick((t) => (t + 1) % 12), 150);
+        return () => clearInterval(interval);
+    }, []);
+
+    return (
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            {[0, 1, 2].map((i) => {
+                const active = tick % 4 === i;
+                return (
+                    <span
+                        key={i}
+                        style={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: "50%",
+                            backgroundColor: "#94a3b8",
+                            display: "inline-block",
+                            transform: active ? "translateY(-3px)" : "translateY(0)",
+                            transition: "transform 150ms ease",
+                        }}
+                    />
+                );
+            })}
+        </div>
+    );
+}
+
 // How long the local composer can sit idle before we tell the other side
 // typing stopped — also doubles as the receiving-side safety-net timeout in
 // case a "stop" event is ever missed (dropped connection mid-keystroke).
@@ -183,17 +221,9 @@ export default function MessagesThread({
                 )}
                 {typingUser && (
                     <div className="flex justify-start">
-                        <div className="max-w-[75%] rounded-2xl px-4 py-3 bg-slate-100 flex items-center gap-1.5" aria-live="polite">
+                        <div className="max-w-[75%] rounded-2xl px-4 py-3 bg-slate-100" aria-live="polite">
                             <span className="sr-only">{typingUser} is typing</span>
-                            <span
-                                className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce"
-                                style={{ animationDelay: "-0.3s" }}
-                            />
-                            <span
-                                className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce"
-                                style={{ animationDelay: "-0.15s" }}
-                            />
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" />
+                            <TypingDots />
                         </div>
                     </div>
                 )}
