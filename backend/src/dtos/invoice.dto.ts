@@ -12,3 +12,8 @@ export type UpdateInvoiceDTO = z.infer<typeof UpdateInvoiceDTO>;
 
 export const RecordPaymentDTO = PaymentSchema;
 export type RecordPaymentDTO = z.infer<typeof RecordPaymentDTO>;
+
+export const VerifyEsewaPaymentDTO = z.object({
+    refId: z.string().min(1, "refId is required"),
+});
+export type VerifyEsewaPaymentDTO = z.infer<typeof VerifyEsewaPaymentDTO>;

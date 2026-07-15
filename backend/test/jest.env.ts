@@ -6,3 +6,6 @@ process.env.CORS_ORIGIN = "http://localhost:3000";
 // Explicitly unset (not just absent) so the AI "not configured" tests are
 // hermetic regardless of what's in the real .env.
 process.env.DEEPSEEK_API_KEY = "";
+// A fixed 32-byte key so eSewa-secret encryption tests are deterministic —
+// never used outside this test run.
+process.env.ENCRYPTION_KEY = "0".repeat(64);

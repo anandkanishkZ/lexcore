@@ -1,11 +1,13 @@
 import { Request, Response } from "express";
-import { CreateInvoiceDTO, UpdateInvoiceDTO, RecordPaymentDTO } from "../dtos/invoice.dto";
+import { CreateInvoiceDTO, UpdateInvoiceDTO, RecordPaymentDTO, VerifyEsewaPaymentDTO } from "../dtos/invoice.dto";
 import { InvoiceService } from "../services/invoice.service";
+import { EsewaPaymentService } from "../services/esewa-payment.service";
 import { IUser } from "../models/user.model";
 import { ApiResponseHelper } from "../utils/apihelper.util";
 import { handleControllerError } from "../utils/error-handler.util";
 
 const invoiceService = new InvoiceService();
+const esewaPaymentService = new EsewaPaymentService();
 
 export class InvoiceController {
     async getAll(req: Request, res: Response) {
@@ -61,8 +63,19 @@ export class InvoiceController {
             if (!parsed.success) {
                 return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
             }
-            const updated = await invoiceService.update(req.params.id as string, parsed.data);
+            const actorId = (req.user as IUser)._id.toString();
+            const updated = await invoiceService.update(req.params.id as string, parsed.data, actorId);
             return ApiResponseHelper.success(res, updated, "Invoice updated successfully", 200);
+        } catch (error: any) {
+            return handleControllerError(res, error, "InvoiceController");
+        }
+    }
+
+    async voidInvoice(req: Request, res: Response) {
+        try {
+            const actorId = (req.user as IUser)._id.toString();
+            const updated = await invoiceService.voidInvoice(req.params.id as string, actorId);
+            return ApiResponseHelper.success(res, updated, "Invoice voided successfully", 200);
         } catch (error: any) {
             return handleControllerError(res, error, "InvoiceController");
         }
@@ -111,6 +124,27 @@ export class InvoiceController {
             const userId = (req.user as IUser)._id.toString();
             const updated = await invoiceService.recordPayment(req.params.id as string, parsed.data, userId);
             return ApiResponseHelper.success(res, updated, "Payment recorded successfully", 201);
+        } catch (error: any) {
+            return handleControllerError(res, error, "InvoiceController");
+        }
+    }
+
+    /** Client-facing: called by the mobile app after the eSewa SDK reports
+     * success. Never trusts that report alone — the service re-verifies
+     * against eSewa's own server before recording anything. */
+    async verifyEsewaPayment(req: Request, res: Response) {
+        try {
+            const parsed = VerifyEsewaPaymentDTO.safeParse(req.body);
+            if (!parsed.success) {
+                return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
+            }
+            const user = req.user as IUser;
+            const updated = await esewaPaymentService.verifyAndRecord(req.params.id as string, parsed.data.refId, {
+                role: user.role,
+                email: user.email,
+                userId: user._id.toString(),
+            });
+            return ApiResponseHelper.success(res, updated, "Payment verified and recorded successfully", 201);
         } catch (error: any) {
             return handleControllerError(res, error, "InvoiceController");
         }

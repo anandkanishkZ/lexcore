@@ -2,11 +2,15 @@ import { InvoiceMongoRepository, InvoiceQuery } from "../repositories/invoice.re
 import { CreateInvoiceDTO, UpdateInvoiceDTO, RecordPaymentDTO } from "../dtos/invoice.dto";
 import { IInvoice, IInvoiceItem } from "../models/invoice.model";
 import { IPayment } from "../models/payment.model";
+import { ClientModel } from "../models/client.model";
 import { HttpException } from "../exceptions/http-exception";
 import { logAudit } from "../utils/audit-log.util";
 import { retryOnDuplicateKey } from "../utils/retry-unique.util";
+import { NotificationService } from "./notification.service";
+import { sendMail } from "../utils/mail.util";
 
 const invoiceRepository = new InvoiceMongoRepository();
+const notificationService = new NotificationService();
 
 function computeTotals(
     items: { description: string; quantity: number; rate: number }[],
@@ -60,7 +64,7 @@ export class InvoiceService {
 
         // See CaseService.create's comment on retryOnDuplicateKey — same
         // count-then-format-then-insert race on the invoiceNumber unique index.
-        return retryOnDuplicateKey(async () => {
+        const created = await retryOnDuplicateKey(async () => {
             const total = await invoiceRepository.countAll();
             const year = new Date().getFullYear();
             const invoiceNumber = `INV-${year}-${String(total + 1).padStart(4, "0")}`;
@@ -81,13 +85,36 @@ export class InvoiceService {
                 createdBy: userId as any,
             });
         });
+
+        // Invoicing had no notification hook at all before this — money
+        // changing hands was invisible to the client until they happened to
+        // check the Billing tab. A "draft" invoice isn't final/billable yet
+        // though, so only notify once it's actually sent.
+        if (created.status === "sent") {
+            const client = await ClientModel.findById(data.client);
+            if (client) {
+                const message = `A new invoice ${created.invoiceNumber} for ${created.total} has been issued to you.`;
+                if (client.linkedUserId) {
+                    await notificationService.notifyUser(client.linkedUserId.toString(), "New invoice", message, {
+                        type: "Invoice",
+                        id: created._id.toString(),
+                    });
+                }
+                await sendMail(client.email, "New invoice", message);
+            }
+        }
+
+        return created;
     }
 
-    async update(id: string, data: UpdateInvoiceDTO): Promise<IInvoice> {
+    async update(id: string, data: UpdateInvoiceDTO, actorId?: string): Promise<IInvoice> {
         const existing = await invoiceRepository.getById(id);
         if (!existing) throw new HttpException(404, "Invoice not found");
         if (existing.status === "paid") {
             throw new HttpException(400, "A paid invoice cannot be edited");
+        }
+        if (existing.status === "void") {
+            throw new HttpException(400, "A voided invoice cannot be edited");
         }
 
         const updatePayload: any = { ...data };
@@ -100,6 +127,17 @@ export class InvoiceService {
                 data.items as { description: string; quantity: number; rate: number }[],
                 taxRate
             );
+            // A "sent" invoice can carry partial payments while still being
+            // editable (status only flips to "paid" once fully covered) —
+            // without this check, the total could be lowered below what's
+            // already been collected, leaving a negative outstanding
+            // balance with no way to reconcile it.
+            if (existing.paidAmount > 0 && total < existing.paidAmount) {
+                throw new HttpException(
+                    400,
+                    `Cannot lower the total below ${existing.paidAmount}, which has already been paid against this invoice`
+                );
+            }
             updatePayload.items = items;
             updatePayload.subtotal = subtotal;
             updatePayload.tax = tax;
@@ -108,12 +146,30 @@ export class InvoiceService {
 
         const updated = await invoiceRepository.update(id, updatePayload);
         if (!updated) throw new HttpException(500, "Failed to update invoice");
+
+        if (actorId) {
+            await logAudit({
+                actorId,
+                action: "invoice.update",
+                entityType: "Invoice",
+                entityId: id,
+                metadata: existing.invoiceNumber,
+            });
+        }
+
         return updated;
     }
 
     async delete(id: string, actorId: string): Promise<boolean> {
         const existing = await invoiceRepository.getById(id);
         if (!existing) throw new HttpException(404, "Invoice not found");
+
+        if (existing.paidAmount > 0) {
+            throw new HttpException(
+                400,
+                "Cannot delete an invoice with recorded payments — void it instead to preserve the payment history."
+            );
+        }
 
         const deleted = await invoiceRepository.delete(id);
         if (deleted) {
@@ -128,6 +184,31 @@ export class InvoiceService {
         return deleted;
     }
 
+    /** Non-destructive alternative to delete — for a wrong or cancelled
+     * invoice that already has payment history against it (or that a firm
+     * simply wants to keep in the record rather than erase). Only reachable
+     * from draft/sent, matching the same reasoning update() uses: a paid or
+     * already-void invoice is a closed record. */
+    async voidInvoice(id: string, actorId: string): Promise<IInvoice> {
+        const existing = await invoiceRepository.getById(id);
+        if (!existing) throw new HttpException(404, "Invoice not found");
+        if (existing.status === "void") throw new HttpException(400, "This invoice is already void");
+        if (existing.status === "paid") throw new HttpException(400, "A fully paid invoice cannot be voided");
+
+        const updated = await invoiceRepository.update(id, { status: "void" });
+        if (!updated) throw new HttpException(500, "Failed to void invoice");
+
+        await logAudit({
+            actorId,
+            action: "invoice.void",
+            entityType: "Invoice",
+            entityId: id,
+            metadata: existing.invoiceNumber,
+        });
+
+        return updated;
+    }
+
     async listPayments(invoiceId: string): Promise<IPayment[]> {
         return invoiceRepository.listPayments(invoiceId);
     }
@@ -139,14 +220,27 @@ export class InvoiceService {
      * once the full total is covered; there is no other way to mark an
      * invoice paid.
      */
-    async recordPayment(invoiceId: string, data: RecordPaymentDTO, userId: string): Promise<IInvoice> {
+    async recordPayment(
+        invoiceId: string,
+        data: RecordPaymentDTO,
+        userId: string,
+        gatewayRef?: string
+    ): Promise<IInvoice> {
         const invoice = await invoiceRepository.getById(invoiceId);
         if (!invoice) throw new HttpException(404, "Invoice not found");
         if (invoice.status === "paid") throw new HttpException(400, "This invoice is already fully paid");
+        if (invoice.status === "void") throw new HttpException(400, "This invoice has been voided");
+
+        // Rounded the same way every other money field on this model is
+        // (see computeTotals) — an unrounded client-supplied float could
+        // drift paidAmount from invoice.total by a fraction of a cent across
+        // several partial payments, permanently stalling the "paid" flip
+        // even though the UI's rounded amountDue already reads $0.00.
+        const amount = Math.round(data.amount * 100) / 100;
 
         const remaining = Math.round((invoice.total - invoice.paidAmount) * 100) / 100;
-        if (data.amount > remaining) {
-            throw new HttpException(400, `Payment of ${data.amount} exceeds the remaining balance of ${remaining}`);
+        if (amount > remaining) {
+            throw new HttpException(400, `Payment of ${amount} exceeds the remaining balance of ${remaining}`);
         }
 
         // See CaseService.create's comment on retryOnDuplicateKey — same
@@ -158,12 +252,13 @@ export class InvoiceService {
 
             return invoiceRepository.createPayment({
                 invoice: invoiceId as any,
-                amount: data.amount,
+                amount,
                 method: data.method,
                 date: data.date ? new Date(data.date) : new Date(),
                 receiptNumber,
                 notes: data.notes ?? "",
                 recordedBy: userId as any,
+                gatewayRef,
             });
         });
 
@@ -178,7 +273,7 @@ export class InvoiceService {
             action: "invoice.payment-recorded",
             entityType: "Invoice",
             entityId: invoiceId,
-            metadata: `${invoice.invoiceNumber} — ${data.amount} via ${data.method}`,
+            metadata: `${invoice.invoiceNumber} — ${amount} via ${data.method}`,
         });
 
         return updated;

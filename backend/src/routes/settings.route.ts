@@ -12,4 +12,9 @@ settingsRouter.use(authorizedMiddleware);
 settingsRouter.get("/firm", staffMiddleware, firmSettingsController.get);
 settingsRouter.put("/firm", adminMiddleware, firmSettingsController.update);
 
+// Any authenticated user, including clients — the mobile app's payment
+// screen needs to know whether eSewa is on before it can launch the SDK, and
+// clients are never staff. Returns no secret, so no elevated gate needed.
+settingsRouter.get("/payment/esewa-config", firmSettingsController.getEsewaConfig);
+
 export default settingsRouter;

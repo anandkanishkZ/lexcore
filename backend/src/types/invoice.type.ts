@@ -20,7 +20,7 @@ export type InvoiceType = z.infer<typeof InvoiceSchema>;
 
 export const PaymentSchema = z.object({
     amount: z.number().min(0.01, "Amount must be greater than 0"),
-    method: z.enum(["cash", "bank_transfer", "card", "cheque", "other"]).default("cash"),
+    method: z.enum(["cash", "bank_transfer", "card", "cheque", "esewa", "other"]).default("cash"),
     date: z.string().optional(),
     notes: z.string().optional(),
 });
