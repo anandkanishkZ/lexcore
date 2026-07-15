@@ -6,6 +6,10 @@ export class MessageMongoRepository {
         return MessageModel.findById(created._id).populate("sender", "firstName lastName") as unknown as Promise<IMessage>;
     }
 
+    async getById(id: string): Promise<IMessage | null> {
+        return MessageModel.findById(id);
+    }
+
     async getHistory(caseId: string): Promise<IMessage[]> {
         return MessageModel.find({ case: caseId })
             .populate("sender", "firstName lastName")

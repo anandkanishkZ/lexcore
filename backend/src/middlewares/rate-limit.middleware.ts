@@ -32,3 +32,14 @@ export const paymentRateLimiter = rateLimit({
     legacyHeaders: false,
     message: { status: 429, success: false, message: "Too many payment attempts. Please try again shortly.", data: null },
 });
+
+// Chat attachment uploads are disk- and bandwidth-costly (up to 10 files ×
+// 25MB each per request) — this bounds how many upload requests one account
+// can fire, independent of multer's own per-request file-count/size caps.
+export const messageAttachmentRateLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000,
+    limit: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { status: 429, success: false, message: "Too many attachments uploaded. Please slow down.", data: null },
+});
