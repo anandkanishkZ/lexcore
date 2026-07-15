@@ -50,9 +50,14 @@ export default function ShareModal({ file, onClose }: { file: { _id: string; nam
     };
 
     const handleRevoke = (shareId: string) => {
+        setError("");
         startTransition(async () => {
             const result = await revokeShareAction(file._id, shareId);
-            if (result.success) loadShares();
+            if (result.success) {
+                loadShares();
+            } else {
+                setError(result.message || "Failed to revoke access");
+            }
         });
     };
 

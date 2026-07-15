@@ -61,11 +61,26 @@ export function useDocumentActions(caseId: string, mode: DocumentsMode) {
     const [shareTarget, setShareTarget] = useState<{ _id: string; name: string } | null>(null);
     const [versionsTarget, setVersionsTarget] = useState<{ _id: string; name: string } | null>(null);
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
+    const [actionError, setActionError] = useState<string | null>(null);
+
+    // Menu-item actions (star, copy, restore) have no modal to show an error
+    // in — they used to just do nothing on failure, unlike DeleteEntryModal
+    // below which already surfaces one. This gives them the same visibility
+    // via a brief, self-dismissing toast instead of a silent no-op.
+    useEffect(() => {
+        if (!actionError) return;
+        const timer = setTimeout(() => setActionError(null), 5000);
+        return () => clearTimeout(timer);
+    }, [actionError]);
 
     const runAndRefresh = (action: () => Promise<{ success: boolean; message?: string }>) => {
         startTransition(async () => {
             const result = await action();
-            if (result.success) router.refresh();
+            if (result.success) {
+                router.refresh();
+            } else {
+                setActionError(result.message || "That action failed. Please try again.");
+            }
         });
     };
 
@@ -143,6 +158,17 @@ export function useDocumentActions(caseId: string, mode: DocumentsMode) {
             {shareTarget && <ShareModal file={shareTarget} onClose={() => setShareTarget(null)} />}
             {versionsTarget && (
                 <VersionHistoryModal caseId={caseId} file={versionsTarget} onClose={() => setVersionsTarget(null)} />
+            )}
+            {actionError && (
+                <div
+                    role="alert"
+                    className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-lg bg-red-600 px-4 py-2.5 text-sm text-white shadow-lg"
+                >
+                    {actionError}
+                    <button onClick={() => setActionError(null)} className="text-white/80 hover:text-white underline">
+                        Dismiss
+                    </button>
+                </div>
             )}
         </>
     );

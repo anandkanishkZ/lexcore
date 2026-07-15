@@ -6,8 +6,20 @@ import Link from "next/link";
 export default async function ProfilePage() {
     const result = await handleUserDetails();
 
-    if (!result.success) {
+    if (!result.success && result.message === "Not authenticated") {
         redirect("/login");
+    }
+
+    if (!result.success || !result.data) {
+        return (
+            <div className="max-w-2xl">
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                    <p className="text-sm text-red-600">
+                        {result.message || "Couldn't load your profile. Please try again."}
+                    </p>
+                </div>
+            </div>
+        );
     }
 
     return (
