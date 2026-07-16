@@ -89,6 +89,22 @@ describe("eSewa payment gateway settings", () => {
         expect(res.status).toBe(200);
         expect(res.body.data).toEqual({ enabled: true, environment: "test" });
     });
+
+    it("exposes name/currency to any authenticated user, including clients", async () => {
+        const { token: adminToken } = await createUserAndToken({ role: "admin" });
+        await request(app)
+            .put("/api/v1/settings/firm")
+            .set("Authorization", `Bearer ${adminToken}`)
+            .send({ name: "Lexcore", currency: "NPR" });
+
+        const { token: clientToken } = await createUserAndToken({ userType: "client", role: "user" });
+        const res = await request(app)
+            .get("/api/v1/settings/public")
+            .set("Authorization", `Bearer ${clientToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.data).toEqual({ name: "Lexcore", currency: "NPR" });
+    });
 });
 
 describe("eSewa payment: initiate", () => {

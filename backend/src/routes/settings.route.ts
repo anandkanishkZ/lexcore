@@ -17,4 +17,9 @@ settingsRouter.put("/firm", adminMiddleware, firmSettingsController.update);
 // clients are never staff. Returns no secret, so no elevated gate needed.
 settingsRouter.get("/payment/esewa-config", firmSettingsController.getEsewaConfig);
 
+// Any authenticated user — non-sensitive (name, currency), needed by the
+// mobile app to format amounts using the firm's actual configured currency
+// instead of a hardcoded one.
+settingsRouter.get("/public", firmSettingsController.getPublicInfo);
+
 export default settingsRouter;

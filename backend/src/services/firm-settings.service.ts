@@ -60,6 +60,15 @@ export class FirmSettingsService {
         return toPublic(updated);
     }
 
+    /** Non-sensitive firm info any signed-in user (staff or client) may
+     * need to render correctly — currently just what's needed to format a
+     * currency amount consistently with what the firm actually configured,
+     * instead of every call site hardcoding "USD". */
+    async getPublicInfo(): Promise<{ name: string; currency: string }> {
+        const settings = await firmSettingsRepository.get();
+        return { name: settings.name, currency: settings.currency };
+    }
+
     /** Used by the client to decide whether to show a "Pay with eSewa"
      * button — the actual payment fields are only ever built server-side,
      * per-invoice, at initiate() time (see EsewaPaymentService). */
