@@ -21,16 +21,31 @@ function excerptOf(text: string): string {
     return trimmed.length > EXCERPT_LENGTH ? `${trimmed.slice(0, EXCERPT_LENGTH)}…` : trimmed;
 }
 
+type RequestingUser = { role: string; email: string; userId?: string };
+
 export class AiService {
     /** Pure MongoDB $text retrieval — no DeepSeek call. Reused by ask(), and
      * useful on its own for a quick keyword browse. No case-visibility
      * scoping beyond staffMiddleware, matching GET /cases' current (unscoped
-     * for staff) behavior. */
-    async search(query: string): Promise<AiSource[]> {
-        const [cases, files] = await Promise.all([
-            caseRepository.searchText(query, SEARCH_LIMIT),
-            fileRepository.searchText(query, SEARCH_LIMIT),
-        ]);
+     * for staff) behavior. Passing requestingUser restricts retrieval to
+     * that user's own cases/documents instead (the client-scoped /my/ask
+     * route). */
+    async search(query: string, requestingUser?: RequestingUser): Promise<AiSource[]> {
+        let cases, files;
+        if (requestingUser) {
+            const myCases = await caseService.getMine(requestingUser.email);
+            const caseIds = myCases.map((c) => c._id.toString());
+            if (caseIds.length === 0) return [];
+            [cases, files] = await Promise.all([
+                caseRepository.searchTextForCases(query, caseIds, SEARCH_LIMIT),
+                fileRepository.searchTextForCases(query, caseIds, SEARCH_LIMIT),
+            ]);
+        } else {
+            [cases, files] = await Promise.all([
+                caseRepository.searchText(query, SEARCH_LIMIT),
+                fileRepository.searchText(query, SEARCH_LIMIT),
+            ]);
+        }
 
         const caseSources: AiSource[] = cases.map((c) => ({
             type: "case",
@@ -55,8 +70,8 @@ export class AiService {
         return [...caseSources, ...fileSources];
     }
 
-    async ask(query: string): Promise<{ answer: string; sources: AiSource[] }> {
-        const sources = await this.search(query);
+    async ask(query: string, requestingUser?: RequestingUser): Promise<{ answer: string; sources: AiSource[] }> {
+        const sources = await this.search(query, requestingUser);
 
         if (sources.length === 0) {
             return { answer: "I couldn't find anything in the case files matching that question.", sources };
@@ -86,10 +101,12 @@ export class AiService {
         return { answer, sources };
     }
 
-    async summarizeCase(caseId: string): Promise<{ summary: string }> {
-        // No requestingUser passed — same "any staff" visibility as
-        // GET /cases, per the AI-search-scope decision.
-        const caseDoc = await caseService.getById(caseId);
+    async summarizeCase(caseId: string, requestingUser?: RequestingUser): Promise<{ summary: string }> {
+        // No requestingUser passed by the staff route — same "any staff"
+        // visibility as GET /cases, per the AI-search-scope decision. The
+        // client-scoped /my/cases/:id/summary route passes requestingUser,
+        // and getById already enforces ownership when it's present.
+        const caseDoc = await caseService.getById(caseId, requestingUser);
         const files = await fileRepository.listAllByCase(caseId, MAX_SUMMARY_FILES);
 
         const documentsText = files
@@ -131,17 +148,22 @@ export class AiService {
     async chatAboutDocument(
         fileId: string,
         query: string,
-        history: { role: "user" | "assistant"; content: string }[]
+        history: { role: "user" | "assistant"; content: string }[],
+        requestingUser?: RequestingUser
     ): Promise<{ answer: string }> {
-        // No requestingUser/file-access check — same "any staff, unscoped"
-        // visibility as search()/ask()/summarizeCase() above. Per-matter
-        // confidentiality between staff (an "Ethical Wall") is explicit
-        // deferred scope for this project (see PROJECT_PLAN.md's Deferred /
-        // Out of Scope section) — until that exists, restricting this one
-        // endpoint while search()/ask() stay firm-wide would be an
-        // inconsistent, false sense of scoping rather than real protection.
+        // No requestingUser/file-access check on the staff route — same "any
+        // staff, unscoped" visibility as search()/ask()/summarizeCase()
+        // above. Per-matter confidentiality between staff (an "Ethical
+        // Wall") is explicit deferred scope for this project (see
+        // PROJECT_PLAN.md's Deferred / Out of Scope section) — until that
+        // exists, restricting this one endpoint while search()/ask() stay
+        // firm-wide would be an inconsistent, false sense of scoping rather
+        // than real protection. The client-scoped /my/documents/:id/chat
+        // route passes requestingUser, which IS enforced below — a client
+        // may only ever reach a document on one of their own cases.
         const file = await fileRepository.getById(fileId);
         if (!file) throw new HttpException(404, "Document not found");
+        if (requestingUser) await caseService.assertAccess(file.case.toString(), requestingUser);
         if (!file.extractedText) {
             throw new HttpException(400, "No extractable text is available for this document");
         }
@@ -161,10 +183,14 @@ export class AiService {
         return { answer };
     }
 
-    async summarizeDocument(fileId: string): Promise<{ summary: string }> {
-        // Same "any staff, unscoped" visibility as chatAboutDocument above.
+    async summarizeDocument(fileId: string, requestingUser?: RequestingUser): Promise<{ summary: string }> {
+        // Same "any staff, unscoped" visibility as chatAboutDocument above
+        // when requestingUser is omitted; the client-scoped
+        // /my/documents/:id/summary route passes it and gets the same
+        // ownership check.
         const file = await fileRepository.getById(fileId);
         if (!file) throw new HttpException(404, "Document not found");
+        if (requestingUser) await caseService.assertAccess(file.case.toString(), requestingUser);
         if (!file.extractedText) {
             throw new HttpException(400, "No extractable text is available for this document");
         }

@@ -131,6 +131,19 @@ export class CaseFileMongoRepository {
             .limit(limit);
     }
 
+    /** Same as searchText, restricted to a given set of case ids — used by
+     * the client-scoped "Ask AI" endpoint so a client's search only ever
+     * reaches documents on their own cases. */
+    async searchTextForCases(query: string, caseIds: string[], limit: number): Promise<ICaseFile[]> {
+        return CaseFileModel.find(
+            { $text: { $search: query }, isDeleted: { $ne: true }, case: { $in: caseIds } },
+            { score: { $meta: "textScore" } }
+        )
+            .populate("case", "title caseNumber")
+            .sort({ score: { $meta: "textScore" } })
+            .limit(limit);
+    }
+
     async create(data: {
         name: string;
         case: string;

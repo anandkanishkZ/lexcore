@@ -84,4 +84,17 @@ export class CaseMongoRepository {
             .sort({ score: { $meta: "textScore" } })
             .limit(limit);
     }
+
+    /** Same as searchText, restricted to a given set of case ids — used by
+     * the client-scoped "Ask AI" endpoint so a client's search only ever
+     * reaches their own cases. */
+    async searchTextForCases(query: string, caseIds: string[], limit: number): Promise<ICase[]> {
+        return CaseModel.find(
+            { $text: { $search: query }, _id: { $in: caseIds } },
+            { score: { $meta: "textScore" } }
+        )
+            .populate("client", "firstName lastName email")
+            .sort({ score: { $meta: "textScore" } })
+            .limit(limit);
+    }
 }

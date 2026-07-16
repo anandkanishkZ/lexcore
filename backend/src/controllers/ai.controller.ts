@@ -4,8 +4,14 @@ import { AiService } from "../services/ai.service";
 import { HttpException } from "../exceptions/http-exception";
 import { ApiResponseHelper } from "../utils/apihelper.util";
 import { handleControllerError } from "../utils/error-handler.util";
+import { IUser } from "../models/user.model";
 
 const aiService = new AiService();
+
+function requestingUserOf(req: Request) {
+    const user = req.user as IUser;
+    return { role: user.role, email: user.email, userId: user._id.toString() };
+}
 
 // handleControllerError flattens every 5xx into a generic "Something went
 // wrong" 500 (deliberately, so internal error details never leak) — but
@@ -64,6 +70,61 @@ export class AiController {
             // at runtime — the cast reflects what's actually guaranteed here.
             const history = parsed.data.history as { role: "user" | "assistant"; content: string }[];
             const data = await aiService.chatAboutDocument(req.params.id as string, parsed.data.query, history);
+            return ApiResponseHelper.success(res, data, "Answer generated successfully", 200);
+        } catch (error: any) {
+            return handleAiError(res, error);
+        }
+    }
+
+    // --- Client-scoped /my/* routes below — same DTOs/logic as their staff
+    // counterparts above, but every call passes requestingUser through so
+    // AiService enforces the caller only ever reaches their own cases and
+    // documents (see routes/ai.route.ts for the access-gating rationale).
+
+    async askMine(req: Request, res: Response) {
+        try {
+            const parsed = AskAiDTO.safeParse(req.body);
+            if (!parsed.success) {
+                return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
+            }
+            const data = await aiService.ask(parsed.data.query, requestingUserOf(req));
+            return ApiResponseHelper.success(res, data, "Answer generated successfully", 200);
+        } catch (error: any) {
+            return handleAiError(res, error);
+        }
+    }
+
+    async summarizeCaseMine(req: Request, res: Response) {
+        try {
+            const data = await aiService.summarizeCase(req.params.id as string, requestingUserOf(req));
+            return ApiResponseHelper.success(res, data, "Case summarized successfully", 200);
+        } catch (error: any) {
+            return handleAiError(res, error);
+        }
+    }
+
+    async summarizeDocumentMine(req: Request, res: Response) {
+        try {
+            const data = await aiService.summarizeDocument(req.params.id as string, requestingUserOf(req));
+            return ApiResponseHelper.success(res, data, "Document summarized successfully", 200);
+        } catch (error: any) {
+            return handleAiError(res, error);
+        }
+    }
+
+    async chatDocumentMine(req: Request, res: Response) {
+        try {
+            const parsed = ChatAboutDocumentDTO.safeParse(req.body);
+            if (!parsed.success) {
+                return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
+            }
+            const history = parsed.data.history as { role: "user" | "assistant"; content: string }[];
+            const data = await aiService.chatAboutDocument(
+                req.params.id as string,
+                parsed.data.query,
+                history,
+                requestingUserOf(req)
+            );
             return ApiResponseHelper.success(res, data, "Answer generated successfully", 200);
         } catch (error: any) {
             return handleAiError(res, error);
