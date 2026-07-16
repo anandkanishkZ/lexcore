@@ -11,9 +11,13 @@ export interface IFirmSettings extends Document {
     currency: string;
     practiceAreas: string[];
     // eSewa payment gateway — admin-configurable so no redeploy is needed to
-    // rotate credentials or flip environments. esewaSecretEncrypted is the
-    // API secret at rest (see utils/crypto.util.ts) and must never be
-    // serialized back to any client — see FirmSettingsService.
+    // rotate credentials or flip environments. esewaClientId doubles as
+    // eSewa's ePay v2 "product_code" (merchant code) — same underlying
+    // value, different name in eSewa's own docs depending on which of their
+    // APIs you're reading. esewaSecretEncrypted is the API secret at rest
+    // (see utils/crypto.util.ts); it signs every payment request
+    // server-side (see EsewaPaymentService) and must never be serialized
+    // back to any client — see FirmSettingsService.
     esewaEnabled: boolean;
     esewaEnvironment: "test" | "live";
     esewaClientId: string;

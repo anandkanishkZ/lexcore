@@ -16,9 +16,11 @@ invoiceRouter.get("/mine", invoiceController.getMine);
 invoiceRouter.get("/:id", invoiceController.getById);
 invoiceRouter.get("/:id/payments", invoiceController.listPayments);
 
-// Client-facing, not staff-only: the mobile app calls this for the client's
-// own invoice after the eSewa SDK reports success. Ownership + double-spend
-// protection live in EsewaPaymentService, not this route.
+// Client-facing, not staff-only: the mobile app calls initiate to get a
+// signed eSewa form for its own invoice, then verify after the checkout
+// page redirects back. Ownership + double-spend protection live in
+// EsewaPaymentService, not this route.
+invoiceRouter.post("/:id/esewa/initiate", paymentRateLimiter, invoiceController.initiateEsewaPayment);
 invoiceRouter.post("/:id/esewa/verify", paymentRateLimiter, invoiceController.verifyEsewaPayment);
 
 // Browsing/creating/editing/recording payments is any-staff; deleting is

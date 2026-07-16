@@ -1,7 +1,7 @@
 import { FirmSettingsMongoRepository } from "../repositories/firm-settings.repository";
 import { UpdateFirmSettingsDTO } from "../dtos/firm-settings.dto";
 import { IFirmSettings } from "../models/firm-settings.model";
-import { encryptSecret, decryptSecret } from "../utils/crypto.util";
+import { encryptSecret } from "../utils/crypto.util";
 import { HttpException } from "../exceptions/http-exception";
 
 const firmSettingsRepository = new FirmSettingsMongoRepository();
@@ -13,27 +13,14 @@ export type PublicFirmSettings = Omit<IFirmSettings, "esewaSecretEncrypted"> & {
     esewaSecretConfigured: boolean;
 };
 
-/**
- * What the mobile client needs to launch a payment. eSewa's own Flutter SDK
- * requires both clientId AND secretId to be passed into its `EsewaConfig`
- * client-side just to open the native payment sheet — that's the vendor's
- * documented integration model, not a choice made here, and their own docs
- * publish test credentials openly for exactly that reason. It's still kept
- * encrypted at rest (protects a DB dump/backup and is never shown in the
- * admin UI), but any authenticated user has to be able to read it decrypted
- * to pay their own invoice — there's no tighter gate below "authenticated"
- * to put it behind. The actual anti-fraud boundary is NOT this secret's
- * secrecy — it's that EsewaPaymentService never trusts a client-reported
- * "success" and always re-verifies the transaction against eSewa's own
- * server before recording a payment. A leaked secretId only lets someone
- * initiate eSewa payment attempts under the firm's merchant identity; it
- * cannot forge a paid invoice.
- */
+/** What any client needs to decide whether to show a "Pay with eSewa"
+ * button at all — nothing more. Unlike the native-SDK integration this
+ * replaced, eSewa's ePay v2 flow signs every payment request server-side
+ * (see EsewaPaymentService.initiate), so the merchant secret — and even the
+ * merchant/product code itself — never has to reach the client. */
 export interface EsewaPublicConfig {
     enabled: boolean;
     environment: "test" | "live";
-    clientId: string;
-    secretId: string;
 }
 
 function toPublic(settings: IFirmSettings): PublicFirmSettings {
@@ -73,24 +60,20 @@ export class FirmSettingsService {
         return toPublic(updated);
     }
 
-    /** Used by InvoiceController/EsewaPaymentService — never returns the
-     * secret, only what a client needs to open the SDK's payment sheet. */
+    /** Used by the client to decide whether to show a "Pay with eSewa"
+     * button — the actual payment fields are only ever built server-side,
+     * per-invoice, at initiate() time (see EsewaPaymentService). */
     async getEsewaPublicConfig(): Promise<EsewaPublicConfig> {
         const settings = await firmSettingsRepository.get();
         if (!settings.esewaEnabled) {
-            return { enabled: false, environment: settings.esewaEnvironment, clientId: "", secretId: "" };
+            return { enabled: false, environment: settings.esewaEnvironment };
         }
         if (settings.esewaSecretEncrypted && !process.env.ENCRYPTION_KEY) {
             // A secret was saved under a since-removed/rotated ENCRYPTION_KEY —
-            // report as unconfigured rather than letting decryptSecret's raw
-            // error surface as an opaque 500 to a paying client.
+            // report as unconfigured rather than letting a later decryptSecret
+            // call fail with an opaque 500 when the client actually pays.
             throw new HttpException(503, "Online payment is temporarily unavailable — contact the firm");
         }
-        return {
-            enabled: true,
-            environment: settings.esewaEnvironment,
-            clientId: settings.esewaClientId,
-            secretId: settings.esewaSecretEncrypted ? decryptSecret(settings.esewaSecretEncrypted) : "",
-        };
+        return { enabled: true, environment: settings.esewaEnvironment };
     }
 }

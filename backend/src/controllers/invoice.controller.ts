@@ -129,9 +129,28 @@ export class InvoiceController {
         }
     }
 
-    /** Client-facing: called by the mobile app after the eSewa SDK reports
-     * success. Never trusts that report alone — the service re-verifies
-     * against eSewa's own server before recording anything. */
+    /** Client-facing: builds a signed eSewa ePay v2 form for this invoice's
+     * outstanding balance. The client POSTs the returned fields to
+     * [formUrl] itself (a real page navigation, e.g. a WebView) — nothing
+     * is recorded here, only prepared. */
+    async initiateEsewaPayment(req: Request, res: Response) {
+        try {
+            const user = req.user as IUser;
+            const intent = await esewaPaymentService.initiate(req.params.id as string, {
+                role: user.role,
+                email: user.email,
+                userId: user._id.toString(),
+            });
+            return ApiResponseHelper.success(res, intent, "Payment initiated successfully", 200);
+        } catch (error: any) {
+            return handleControllerError(res, error, "InvoiceController");
+        }
+    }
+
+    /** Client-facing: called after the client's eSewa checkout page
+     * redirects back with a transaction_uuid. Never trusts that report
+     * alone — the service re-verifies against eSewa's own server before
+     * recording anything. */
     async verifyEsewaPayment(req: Request, res: Response) {
         try {
             const parsed = VerifyEsewaPaymentDTO.safeParse(req.body);
@@ -139,11 +158,11 @@ export class InvoiceController {
                 return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
             }
             const user = req.user as IUser;
-            const updated = await esewaPaymentService.verifyAndRecord(req.params.id as string, parsed.data.refId, {
-                role: user.role,
-                email: user.email,
-                userId: user._id.toString(),
-            });
+            const updated = await esewaPaymentService.verifyAndRecord(
+                req.params.id as string,
+                parsed.data.transactionUuid,
+                { role: user.role, email: user.email, userId: user._id.toString() }
+            );
             return ApiResponseHelper.success(res, updated, "Payment verified and recorded successfully", 201);
         } catch (error: any) {
             return handleControllerError(res, error, "InvoiceController");
