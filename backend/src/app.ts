@@ -23,6 +23,7 @@ import aiRouter from "./routes/ai.route";
 import reportRouter from "./routes/report.route";
 import { HttpException } from "./exceptions/http-exception";
 import { ApiResponseHelper } from "./utils/apihelper.util";
+import { captureException } from "./utils/error-tracking.util";
 import { UPLOAD_DIR } from "./middlewares/upload.middleware";
 import { PORT, CORS_ORIGINS } from "./configs/constant";
 
@@ -80,6 +81,7 @@ app.use((error: HttpException | Error, req: Request, res: Response, next: NextFu
     // Anything else is unexpected — log it server-side (nothing did before) and
     // keep the client-facing message generic, same rule as handleControllerError.
     console.error("[unhandled error]", error);
+    captureException(error, { path: req.path, method: req.method });
     return ApiResponseHelper.error(res, "Internal Server Error", 500);
 });
 

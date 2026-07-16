@@ -1,3 +1,4 @@
+import fs from "fs";
 import { Request, Response } from "express";
 import { z } from "zod";
 import { CreateUserDTO, LoginUserDTO, UpdateUserDTO, ChangePasswordDTO, ForgotPasswordDTO, ResetPasswordDTO } from "../dtos/user.dto";
@@ -5,6 +6,7 @@ import { UserService } from "../services/user.service";
 import { toPublicUser, IUser } from "../models/user.model";
 import { ApiResponseHelper } from "../utils/apihelper.util";
 import { handleControllerError } from "../utils/error-handler.util";
+import { assertUploadIsSafe } from "../utils/malware-scan.util";
 
 const userService = new UserService();
 
@@ -68,6 +70,12 @@ export class UserController {
             const updateData: any = { ...parsed.data };
 
             if (req.file) {
+                try {
+                    await assertUploadIsSafe(req.file.path);
+                } catch (error: any) {
+                    fs.unlink(req.file.path, () => {});
+                    return ApiResponseHelper.error(res, error.message || "This file failed a security check.", 400);
+                }
                 updateData.profileImage = `/uploads/${req.file.filename}`;
             }
 
@@ -82,6 +90,12 @@ export class UserController {
         try {
             if (!req.file) {
                 return ApiResponseHelper.error(res, "No image file provided", 400);
+            }
+            try {
+                await assertUploadIsSafe(req.file.path);
+            } catch (error: any) {
+                fs.unlink(req.file.path, () => {});
+                return ApiResponseHelper.error(res, error.message || "This file failed a security check.", 400);
             }
             const userId = (req.user as IUser)._id.toString();
             const imagePath = `/uploads/${req.file.filename}`;

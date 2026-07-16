@@ -11,6 +11,7 @@ import { sendMail } from "../utils/mail.util";
 import { getIo } from "../socket/io-instance";
 import { isOnline } from "../socket/presence";
 import { classifyAttachment, MESSAGE_ATTACHMENTS_DIR } from "../middlewares/message-attachment-upload.middleware";
+import { assertUploadIsSafe } from "../utils/malware-scan.util";
 
 const messageRepository = new MessageMongoRepository();
 const caseService = new CaseService();
@@ -81,6 +82,15 @@ export class MessageService {
         const trimmedContent = content?.trim() ?? "";
         if (files.length === 0 && !trimmedContent) {
             throw new HttpException(400, "Message must include text or at least one attachment");
+        }
+
+        for (const file of files) {
+            try {
+                await assertUploadIsSafe(file.path);
+            } catch (error: any) {
+                await this.cleanupFiles(files);
+                throw new HttpException(400, error.message || "One of these files failed a security check and cannot be sent.");
+            }
         }
 
         const attachments: Partial<IMessageAttachment>[] = files.map((file) => ({

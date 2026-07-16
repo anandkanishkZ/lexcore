@@ -15,6 +15,7 @@ import { extractTextSafely, ocrPdfText } from "../utils/text-extraction.util";
 import { UserMongoRepository } from "../repositories/user.repository";
 import { NotificationService } from "./notification.service";
 import { sendMail } from "../utils/mail.util";
+import { assertUploadIsSafe } from "../utils/malware-scan.util";
 
 type RequestingUser = { role: string; email: string; userId: string };
 
@@ -87,6 +88,13 @@ export class DocumentService {
         if (file.size === 0) {
             fs.unlink(file.path, () => {});
             throw new HttpException(400, "That file is empty");
+        }
+
+        try {
+            await assertUploadIsSafe(file.path);
+        } catch (error: any) {
+            fs.unlink(file.path, () => {});
+            throw new HttpException(400, error.message || "This file failed a security check and cannot be uploaded.");
         }
 
         const extraction = await extractTextSafely(file.path, file.mimetype);
@@ -198,6 +206,13 @@ export class DocumentService {
         if (file.size === 0) {
             fs.unlink(file.path, () => {});
             throw new HttpException(400, "That file is empty");
+        }
+
+        try {
+            await assertUploadIsSafe(file.path);
+        } catch (error: any) {
+            fs.unlink(file.path, () => {});
+            throw new HttpException(400, error.message || "This file failed a security check and cannot be uploaded.");
         }
 
         const nextVersionNumber = (await fileVersionRepository.countByFile(fileId)) + 1;

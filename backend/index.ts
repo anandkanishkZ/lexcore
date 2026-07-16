@@ -8,13 +8,19 @@ import { setIo } from "./src/socket/io-instance";
 import { initChatGateway } from "./src/socket/chat.gateway";
 import { CaseModel } from "./src/models/case.model";
 import { CaseFileModel } from "./src/models/case-file.model";
+import { startBackupScheduler } from "./scripts/backup-scheduler";
+import { initErrorTracking, captureException } from "./src/utils/error-tracking.util";
+
+initErrorTracking();
 
 process.on("unhandledRejection", (reason) => {
     console.error("Unhandled promise rejection:", reason);
+    captureException(reason);
 });
 
 process.on("uncaughtException", (error) => {
     console.error("Uncaught exception:", error);
+    captureException(error);
 });
 
 async function start() {
@@ -40,6 +46,8 @@ async function start() {
     server.listen(PORT, () => {
         console.log(`Server: http://localhost:${PORT}`);
     });
+
+    startBackupScheduler();
 
     const shutdown = (signal: string) => {
         console.log(`${signal} received, shutting down gracefully...`);

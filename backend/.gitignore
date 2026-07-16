@@ -8,3 +8,4 @@ uploads/
 # (see utils/text-extraction.util.ts) — a runtime cache, not source.
 .cache/
 *.traineddata
+backups/

@@ -1,5 +1,6 @@
 import { Response } from "express";
 import { ApiResponseHelper } from "./apihelper.util";
+import { captureException } from "./error-tracking.util";
 
 /**
  * Every controller catch block reduces to this shape. `error.status` is only
@@ -14,6 +15,7 @@ export function handleControllerError(res: Response, error: any, fallbackMessage
     const status = error?.status || 500;
     if (status >= 500) {
         console.error(`[${fallbackMessage}]`, error);
+        captureException(error, { context: fallbackMessage });
         return ApiResponseHelper.error(res, "Something went wrong. Please try again.", 500);
     }
     return ApiResponseHelper.error(res, error?.message || fallbackMessage, status);
