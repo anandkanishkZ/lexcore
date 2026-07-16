@@ -11,7 +11,8 @@ import {
     useSensors,
 } from "@dnd-kit/core";
 import { updateTaskAction } from "@/lib/actions/task";
-import { taskStatuses, statusLabel, statusStyles, priorityStyles } from "./constants";
+import StatusBadge from "../../_components/StatusBadge";
+import { taskStatuses, statusLabel, statusTone, priorityLabel, priorityTone } from "./constants";
 import type { TaskRow } from "./TasksTable";
 
 function BoardCard({ t, onEdit }: { t: TaskRow; onEdit: (task: TaskRow) => void }) {
@@ -29,13 +30,9 @@ function BoardCard({ t, onEdit }: { t: TaskRow; onEdit: (task: TaskRow) => void 
             className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm cursor-grab active:cursor-grabbing touch-none"
         >
             <p className="text-sm font-medium text-slate-900 truncate">{t.title}</p>
-            <span
-                className={`inline-block mt-2 px-2 py-0.5 rounded-full text-xs capitalize ${
-                    priorityStyles[t.priority] ?? "bg-slate-100 text-slate-600"
-                }`}
-            >
-                {t.priority}
-            </span>
+            <div className="mt-2">
+                <StatusBadge tone={priorityTone[t.priority] ?? "neutral"} label={priorityLabel[t.priority] ?? t.priority} />
+            </div>
             {t.assignee && (
                 <p className="text-xs text-slate-400 mt-2 truncate">
                     {t.assignee.firstName} {t.assignee.lastName}
@@ -66,9 +63,7 @@ function BoardColumn({ status, tasks, onEdit }: { status: string; tasks: TaskRow
             }`}
         >
             <div className="flex items-center justify-between mb-3 px-1">
-                <span className={`inline-block px-2 py-0.5 rounded-full text-xs ${statusStyles[status] ?? "bg-slate-100 text-slate-600"}`}>
-                    {statusLabel[status] ?? status}
-                </span>
+                <StatusBadge tone={statusTone[status] ?? "neutral"} label={statusLabel[status] ?? status} />
                 <span className="text-xs text-slate-400">{tasks.length}</span>
             </div>
             <div className="space-y-2 min-h-16">

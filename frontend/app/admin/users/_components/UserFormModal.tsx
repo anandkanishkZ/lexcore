@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { X } from "lucide-react";
 import { createUserSchema, editUserSchema, type CreateUserFormData, type EditUserFormData } from "./userSchema";
 import { createAdminUserAction, updateAdminUserAction } from "@/lib/actions/admin-user";
+import { TextField, SelectField } from "../../_components/FormField";
 
 const userTypeOptions = [
     "attorney",
@@ -86,80 +87,37 @@ export default function UserFormModal({ mode, userId, defaultValues, onClose, on
                     )}
 
                     <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">First Name</label>
-                            <input
-                                type="text"
-                                {...register("firstName")}
-                                className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition"
-                            />
-                            {errors.firstName && (
-                                <span className="mt-1 block text-xs text-red-500">{errors.firstName.message}</span>
-                            )}
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Last Name</label>
-                            <input
-                                type="text"
-                                {...register("lastName")}
-                                className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition"
-                            />
-                            {errors.lastName && (
-                                <span className="mt-1 block text-xs text-red-500">{errors.lastName.message}</span>
-                            )}
-                        </div>
+                        <TextField label="First Name" type="text" error={errors.firstName?.message} {...register("firstName")} />
+                        <TextField label="Last Name" type="text" error={errors.lastName?.message} {...register("lastName")} />
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
-                        <input
-                            type="email"
-                            {...register("email")}
-                            className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition"
-                        />
-                        {errors.email && <span className="mt-1 block text-xs text-red-500">{errors.email.message}</span>}
-                    </div>
+                    <TextField label="Email" type="email" error={errors.email?.message} {...register("email")} />
 
                     <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">User Type</label>
-                            <select
-                                {...register("userType")}
-                                className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition bg-white capitalize"
-                            >
-                                {userTypeOptions.map((t) => (
-                                    <option key={t} value={t} className="capitalize">
-                                        {t}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Role</label>
-                            <select
-                                {...register("role")}
-                                className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition bg-white"
-                            >
-                                <option value="user">User</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                        </div>
+                        <SelectField label="User Type" className="capitalize" {...register("userType")}>
+                            {userTypeOptions.map((t) => (
+                                <option key={t} value={t} className="capitalize">
+                                    {t}
+                                </option>
+                            ))}
+                        </SelectField>
+                        <SelectField label="Role" {...register("role")}>
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                        </SelectField>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                            Password {mode === "edit" && <span className="text-slate-400">(leave blank to keep current)</span>}
-                        </label>
-                        <input
-                            type="password"
-                            {...register("password")}
-                            placeholder={mode === "edit" ? "••••••••" : ""}
-                            className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition"
-                        />
-                        {errors.password && (
-                            <span className="mt-1 block text-xs text-red-500">{errors.password.message}</span>
-                        )}
-                    </div>
+                    <TextField
+                        label={
+                            <>
+                                Password {mode === "edit" && <span className="text-slate-400">(leave blank to keep current)</span>}
+                            </>
+                        }
+                        type="password"
+                        placeholder={mode === "edit" ? "••••••••" : ""}
+                        error={errors.password?.message}
+                        {...register("password")}
+                    />
 
                     <div className="flex gap-3 pt-2">
                         <button

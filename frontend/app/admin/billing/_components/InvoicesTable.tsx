@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { Eye } from "lucide-react";
-import { statusStyles, statusLabel, displayStatus, formatCurrency } from "./constants";
+import StatusBadge from "../../_components/StatusBadge";
+import { statusTone, statusStrikethrough, statusLabel, displayStatus, formatCurrency } from "./constants";
 
 export interface InvoiceRow {
     _id: string;
@@ -14,7 +15,7 @@ export interface InvoiceRow {
     dueDate: string;
 }
 
-export default function InvoicesTable({ invoices }: { invoices: InvoiceRow[] }) {
+export default function InvoicesTable({ invoices, currency = "USD" }: { invoices: InvoiceRow[]; currency?: string }) {
     return (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
@@ -58,17 +59,17 @@ export default function InvoicesTable({ invoices }: { invoices: InvoiceRow[] }) 
                                         {new Date(inv.dueDate).toLocaleDateString()}
                                     </td>
                                     <td className="px-5 py-3.5 text-right text-slate-900 font-medium">
-                                        {formatCurrency(inv.total)}
+                                        {formatCurrency(inv.total, currency)}
                                     </td>
                                     <td className="px-5 py-3.5 text-right text-slate-500 hidden lg:table-cell">
-                                        {amountDue > 0 ? formatCurrency(amountDue) : "—"}
+                                        {amountDue > 0 ? formatCurrency(amountDue, currency) : "—"}
                                     </td>
                                     <td className="px-5 py-3.5">
-                                        <span
-                                            className={`inline-block px-2 py-0.5 rounded-full text-xs ${statusStyles[shownStatus] ?? "bg-slate-100 text-slate-600"}`}
-                                        >
-                                            {statusLabel[shownStatus] ?? shownStatus}
-                                        </span>
+                                        <StatusBadge
+                                            tone={statusTone[shownStatus] ?? "neutral"}
+                                            label={statusLabel[shownStatus] ?? shownStatus}
+                                            strikethrough={statusStrikethrough[shownStatus]}
+                                        />
                                     </td>
                                     <td className="px-5 py-3.5 text-right">
                                         <Link

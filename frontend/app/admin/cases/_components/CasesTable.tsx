@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Eye, Pencil, Trash2 } from "lucide-react";
-import DeleteCaseModal from "./DeleteCaseModal";
-import { statusStyles, typeLabel } from "./constants";
+import ConfirmModal from "../../_components/ConfirmModal";
+import StatusBadge from "../../_components/StatusBadge";
+import { deleteCaseAction } from "@/lib/actions/case";
+import { statusTone, statusLabel, typeLabel } from "./constants";
 
 export interface CaseRow {
     _id: string;
@@ -67,13 +69,7 @@ export default function CasesTable({ cases }: { cases: CaseRow[] }) {
                                         )}
                                     </td>
                                     <td className="px-5 py-3.5">
-                                        <span
-                                            className={`inline-block px-2 py-0.5 rounded-full text-xs capitalize ${
-                                                statusStyles[c.status] ?? "bg-slate-100 text-slate-600"
-                                            }`}
-                                        >
-                                            {c.status}
-                                        </span>
+                                        <StatusBadge tone={statusTone[c.status] ?? "neutral"} label={statusLabel[c.status] ?? c.status} />
                                     </td>
                                     <td className="px-5 py-3.5 text-right">
                                         <div className="flex items-center justify-end gap-1">
@@ -108,9 +104,17 @@ export default function CasesTable({ cases }: { cases: CaseRow[] }) {
             </div>
 
             {deleteTarget && (
-                <DeleteCaseModal
-                    caseId={deleteTarget.id}
-                    title={deleteTarget.title}
+                <ConfirmModal
+                    title="Delete case"
+                    message={
+                        <>
+                            Are you sure you want to delete <span className="font-medium text-slate-900">{deleteTarget.title}</span>? This
+                            action cannot be undone.
+                        </>
+                    }
+                    confirmLabel="Delete"
+                    pendingLabel="Deleting..."
+                    action={() => deleteCaseAction(deleteTarget.id)}
                     onClose={() => setDeleteTarget(null)}
                     onSuccess={() => {
                         setDeleteTarget(null);

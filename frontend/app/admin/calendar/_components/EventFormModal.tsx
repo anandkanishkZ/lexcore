@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { X, Trash2 } from "lucide-react";
 import { eventSchema, EventFormData } from "./schema";
 import { createCalendarEventAction, updateCalendarEventAction, deleteCalendarEventAction } from "@/lib/actions/calendar-event";
+import { TextField, TextAreaField, SelectField } from "../../_components/FormField";
 
 interface CaseOption {
     _id: string;
@@ -21,9 +22,6 @@ interface EventFormModalProps {
     onClose: () => void;
     onSuccess: () => void;
 }
-
-const inputClass =
-    "w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition bg-white";
 
 export default function EventFormModal({ mode, eventId, cases, defaultValues, onClose, onSuccess }: EventFormModalProps) {
     const [isPending, startTransition] = useTransition();
@@ -89,63 +87,57 @@ export default function EventFormModal({ mode, eventId, cases, defaultValues, on
                         </p>
                     )}
 
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Title</label>
-                        <input type="text" {...register("title")} className={inputClass} />
-                        {errors.title && <span className="mt-1 block text-xs text-red-500">{errors.title.message}</span>}
+                    <TextField label="Title" type="text" error={errors.title?.message} {...register("title")} />
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <SelectField label="Type" {...register("type")}>
+                            <option value="hearing">Hearing</option>
+                            <option value="meeting">Meeting</option>
+                            <option value="deadline">Deadline</option>
+                            <option value="reminder">Reminder</option>
+                            <option value="other">Other</option>
+                        </SelectField>
+                        <TextField label="Time" type="time" {...register("time")} />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Type</label>
-                            <select {...register("type")} className={inputClass}>
-                                <option value="hearing">Hearing</option>
-                                <option value="meeting">Meeting</option>
-                                <option value="deadline">Deadline</option>
-                                <option value="reminder">Reminder</option>
-                                <option value="other">Other</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Time</label>
-                            <input type="time" {...register("time")} className={inputClass} />
-                        </div>
+                        <TextField label="Date" type="date" error={errors.date?.message} {...register("date")} />
+                        <TextField
+                            label={
+                                <>
+                                    Location <span className="text-slate-400 font-normal">(optional)</span>
+                                </>
+                            }
+                            type="text"
+                            {...register("location")}
+                        />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Date</label>
-                            <input type="date" {...register("date")} className={inputClass} />
-                            {errors.date && <span className="mt-1 block text-xs text-red-500">{errors.date.message}</span>}
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                                Location <span className="text-slate-400 font-normal">(optional)</span>
-                            </label>
-                            <input type="text" {...register("location")} className={inputClass} />
-                        </div>
-                    </div>
+                    <SelectField
+                        label={
+                            <>
+                                Linked Case <span className="text-slate-400 font-normal">(optional)</span>
+                            </>
+                        }
+                        {...register("case")}
+                    >
+                        <option value="">— None —</option>
+                        {cases.map((c) => (
+                            <option key={c._id} value={c._id}>
+                                {c.title} ({c.caseNumber})
+                            </option>
+                        ))}
+                    </SelectField>
 
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                            Linked Case <span className="text-slate-400 font-normal">(optional)</span>
-                        </label>
-                        <select {...register("case")} className={inputClass}>
-                            <option value="">— None —</option>
-                            {cases.map((c) => (
-                                <option key={c._id} value={c._id}>
-                                    {c.title} ({c.caseNumber})
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                            Notes <span className="text-slate-400 font-normal">(optional)</span>
-                        </label>
-                        <textarea {...register("notes")} rows={2} className={`${inputClass} resize-none`} />
-                    </div>
+                    <TextAreaField
+                        label={
+                            <>
+                                Notes <span className="text-slate-400 font-normal">(optional)</span>
+                            </>
+                        }
+                        rows={2}
+                        {...register("notes")}
+                    />
 
                     <div className="flex items-center gap-3 pt-2">
                         <button

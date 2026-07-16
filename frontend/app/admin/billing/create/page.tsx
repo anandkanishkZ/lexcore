@@ -1,13 +1,16 @@
 import { redirect } from "next/navigation";
 import { fetchClientsAction } from "@/lib/actions/client";
 import { fetchCasesAction } from "@/lib/actions/case";
+import { fetchFirmSettingsAction } from "@/lib/actions/settings";
 import InvoiceForm from "../_components/InvoiceForm";
 
 export default async function CreateInvoicePage() {
-    const [clientsResult, casesResult] = await Promise.all([
+    const [clientsResult, casesResult, settingsResult] = await Promise.all([
         fetchClientsAction(1, 100),
         fetchCasesAction(1, 100),
+        fetchFirmSettingsAction(),
     ]);
+    const currency: string = settingsResult.success ? (settingsResult.data?.currency ?? "USD") : "USD";
 
     if (!clientsResult.success && clientsResult.message === "Not authenticated") {
         redirect("/login");
@@ -33,7 +36,7 @@ export default async function CreateInvoicePage() {
             </div>
 
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-                <InvoiceForm clients={clients} cases={cases} />
+                <InvoiceForm clients={clients} cases={cases} currency={currency} />
             </div>
         </div>
     );

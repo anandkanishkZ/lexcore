@@ -2,8 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AlertCircle, Plus, Receipt } from "lucide-react";
 import { fetchInvoicesAction } from "@/lib/actions/invoice";
+import { fetchFirmSettingsAction } from "@/lib/actions/settings";
 import InvoicesTable, { type InvoiceRow } from "./_components/InvoicesTable";
-import { displayStatus } from "./_components/constants";
+import { displayStatus, formatCurrency } from "./_components/constants";
 
 interface PageProps {
     searchParams: Promise<{ status?: string }>;
@@ -22,12 +23,13 @@ export default async function BillingPage({ searchParams }: PageProps) {
     const params = await searchParams;
     const activeTab = params.status ?? "";
 
-    const result = await fetchInvoicesAction(1, 200);
+    const [result, settingsResult] = await Promise.all([fetchInvoicesAction(1, 200), fetchFirmSettingsAction()]);
 
     if (!result.success && result.message === "Not authenticated") {
         redirect("/login");
     }
 
+    const currency: string = settingsResult.success ? (settingsResult.data?.currency ?? "USD") : "USD";
     const all: InvoiceRow[] = result.data ?? [];
     const invoices = activeTab
         ? all.filter((inv) => displayStatus(inv.status, inv.dueDate) === activeTab)
@@ -45,7 +47,7 @@ export default async function BillingPage({ searchParams }: PageProps) {
                     {outstanding > 0 && (
                         <span className="text-slate-400">
                             {" "}
-                            &middot; {new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(outstanding)} outstanding
+                            &middot; {formatCurrency(outstanding, currency)} outstanding
                         </span>
                     )}
                 </p>
@@ -91,7 +93,7 @@ export default async function BillingPage({ searchParams }: PageProps) {
                     </p>
                 </div>
             ) : (
-                <InvoicesTable invoices={invoices} />
+                <InvoicesTable invoices={invoices} currency={currency} />
             )}
         </div>
     );

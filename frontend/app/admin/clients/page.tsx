@@ -2,14 +2,15 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AlertCircle, UserPlus, ChevronLeft, ChevronRight } from "lucide-react";
 import { fetchClientsAction } from "@/lib/actions/client";
+import StatusBadge, { type StatusTone } from "../_components/StatusBadge";
 
 interface PageProps {
     searchParams: Promise<{ page?: string; size?: string; search?: string }>;
 }
 
-const statusStyles: Record<string, string> = {
-    active: "bg-emerald-50 text-emerald-700",
-    inactive: "bg-red-50 text-red-500",
+const statusTone: Record<string, StatusTone> = {
+    active: "success",
+    inactive: "danger",
 };
 
 export default async function ClientsPage({ searchParams }: PageProps) {
@@ -116,13 +117,7 @@ export default async function ClientsPage({ searchParams }: PageProps) {
                                             {client.type}
                                         </td>
                                         <td className="px-5 py-3.5">
-                                            <span
-                                                className={`inline-block px-2 py-0.5 rounded-full text-xs capitalize ${
-                                                    statusStyles[client.status] ?? "bg-slate-100 text-slate-600"
-                                                }`}
-                                            >
-                                                {client.status}
-                                            </span>
+                                            <StatusBadge tone={statusTone[client.status] ?? "neutral"} label={client.status} className="capitalize" />
                                         </td>
                                         <td className="px-5 py-3.5 text-right">
                                             <div className="flex items-center justify-end gap-2">

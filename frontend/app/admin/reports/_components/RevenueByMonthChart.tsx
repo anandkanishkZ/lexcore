@@ -18,22 +18,26 @@ function label(month: string): string {
     return `${MONTH_NAMES[Number(m) - 1]} ${year}`;
 }
 
-function formatCurrency(value: number): string {
-    return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
+function formatCurrency(value: number, currency = "USD"): string {
+    try {
+        return new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
+    } catch {
+        return `${currency} ${Math.round(value)}`;
+    }
 }
 
-function TooltipContent({ active, payload }: any) {
+function TooltipContent({ active, payload, currency }: any) {
     if (!active || !payload?.length) return null;
     const row = payload[0].payload as RevenueRow;
     return (
         <div className="bg-white border border-slate-200 rounded-lg shadow-sm px-3 py-2">
-            <p className="text-sm font-semibold text-slate-900">{formatCurrency(row.total)}</p>
+            <p className="text-sm font-semibold text-slate-900">{formatCurrency(row.total, currency)}</p>
             <p className="text-xs text-slate-500">{label(row.month)}</p>
         </div>
     );
 }
 
-export default function RevenueByMonthChart({ data }: { data: RevenueRow[] }) {
+export default function RevenueByMonthChart({ data, currency = "USD" }: { data: RevenueRow[]; currency?: string }) {
     const chartData = data.map((d) => ({ ...d, label: label(d.month) }));
     const total = data.reduce((sum, d) => sum + d.total, 0);
 
@@ -41,7 +45,7 @@ export default function RevenueByMonthChart({ data }: { data: RevenueRow[] }) {
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
                 <p className="text-sm font-semibold text-slate-900">Revenue by Month</p>
-                <p className="text-xs text-slate-400">{formatCurrency(total)} total</p>
+                <p className="text-xs text-slate-400">{formatCurrency(total, currency)} total</p>
             </div>
             <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
@@ -65,9 +69,9 @@ export default function RevenueByMonthChart({ data }: { data: RevenueRow[] }) {
                             axisLine={false}
                             tickLine={false}
                             width={48}
-                            tickFormatter={(v) => formatCurrency(v)}
+                            tickFormatter={(v) => formatCurrency(v, currency)}
                         />
-                        <Tooltip content={<TooltipContent />} cursor={{ stroke: GRIDLINE }} />
+                        <Tooltip content={<TooltipContent currency={currency} />} cursor={{ stroke: GRIDLINE }} />
                         <Area
                             type="monotone"
                             dataKey="total"
@@ -96,7 +100,7 @@ export default function RevenueByMonthChart({ data }: { data: RevenueRow[] }) {
                         {chartData.map((row) => (
                             <tr key={row.month} className="border-t border-slate-100">
                                 <td className="py-1.5 text-slate-700">{row.label}</td>
-                                <td className="py-1.5 text-right text-slate-700">{formatCurrency(row.total)}</td>
+                                <td className="py-1.5 text-right text-slate-700">{formatCurrency(row.total, currency)}</td>
                             </tr>
                         ))}
                     </tbody>

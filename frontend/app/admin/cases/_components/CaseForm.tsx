@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { caseSchema, CaseFormData, CASE_TYPES, CASE_STATUSES } from "./schema";
 import { createCaseAction, updateCaseAction } from "@/lib/actions/case";
+import { TextField, TextAreaField, SelectField } from "../../_components/FormField";
 
 interface ClientOption {
     _id: string;
@@ -28,9 +29,6 @@ interface CaseFormProps {
     attorneys: AttorneyOption[];
     defaultValues?: Partial<CaseFormData>;
 }
-
-const inputClass =
-    "w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition bg-white";
 
 export default function CaseForm({ mode, caseId, clients, attorneys, defaultValues }: CaseFormProps) {
     const [isPending, startTransition] = useTransition();
@@ -81,106 +79,77 @@ export default function CaseForm({ mode, caseId, clients, attorneys, defaultValu
                 </p>
             )}
 
-            {/* Title */}
-            <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Case Title</label>
-                <input
-                    type="text"
-                    {...register("title")}
-                    placeholder="e.g. Smith v. Jones"
-                    className={inputClass}
-                />
-                {errors.title && (
-                    <span className="mt-1 block text-xs text-red-500">{errors.title.message}</span>
-                )}
-            </div>
+            <TextField label="Case Title" type="text" placeholder="e.g. Smith v. Jones" error={errors.title?.message} {...register("title")} />
 
             {/* Type + Status */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Case Type</label>
-                    <select {...register("type")} className={inputClass}>
-                        {CASE_TYPES.map((t) => (
-                            <option key={t} value={t} className="capitalize">
-                                {t.charAt(0).toUpperCase() + t.slice(1)}
-                            </option>
-                        ))}
-                    </select>
-                    {errors.type && (
-                        <span className="mt-1 block text-xs text-red-500">{errors.type.message}</span>
-                    )}
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Status</label>
-                    <select {...register("status")} className={inputClass}>
-                        {CASE_STATUSES.map((s) => (
-                            <option key={s} value={s}>
-                                {s.charAt(0).toUpperCase() + s.slice(1)}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-            </div>
-
-            {/* Client */}
-            <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Client</label>
-                <select {...register("client")} className={inputClass}>
-                    <option value="">— Select a client —</option>
-                    {clients.map((c) => (
-                        <option key={c._id} value={c._id}>
-                            {c.firstName} {c.lastName} ({c.email})
+                <SelectField label="Case Type" error={errors.type?.message} {...register("type")}>
+                    {CASE_TYPES.map((t) => (
+                        <option key={t} value={t} className="capitalize">
+                            {t.charAt(0).toUpperCase() + t.slice(1)}
                         </option>
                     ))}
-                </select>
-                {errors.client && (
-                    <span className="mt-1 block text-xs text-red-500">{errors.client.message}</span>
-                )}
-            </div>
-
-            {/* Assigned Attorney */}
-            <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                    Assigned Attorney <span className="text-slate-400 font-normal">(optional)</span>
-                </label>
-                <select {...register("assignedAttorney")} className={inputClass}>
-                    <option value="">— Unassigned —</option>
-                    {attorneys.map((a) => (
-                        <option key={a._id} value={a._id}>
-                            {a.firstName} {a.lastName} — {a.userType}
+                </SelectField>
+                <SelectField label="Status" {...register("status")}>
+                    {CASE_STATUSES.map((s) => (
+                        <option key={s} value={s}>
+                            {s.charAt(0).toUpperCase() + s.slice(1)}
                         </option>
                     ))}
-                </select>
+                </SelectField>
             </div>
+
+            <SelectField label="Client" error={errors.client?.message} {...register("client")}>
+                <option value="">— Select a client —</option>
+                {clients.map((c) => (
+                    <option key={c._id} value={c._id}>
+                        {c.firstName} {c.lastName} ({c.email})
+                    </option>
+                ))}
+            </SelectField>
+
+            <SelectField
+                label={
+                    <>
+                        Assigned Attorney <span className="text-slate-400 font-normal">(optional)</span>
+                    </>
+                }
+                {...register("assignedAttorney")}
+            >
+                <option value="">— Unassigned —</option>
+                {attorneys.map((a) => (
+                    <option key={a._id} value={a._id}>
+                        {a.firstName} {a.lastName} — {a.userType}
+                    </option>
+                ))}
+            </SelectField>
 
             {/* Open Date + Close Date */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Open Date</label>
-                    <input type="date" {...register("openDate")} className={inputClass} />
-                </div>
+                <TextField label="Open Date" type="date" {...register("openDate")} />
                 {mode === "edit" && (
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                            Close Date <span className="text-slate-400 font-normal">(optional)</span>
-                        </label>
-                        <input type="date" {...register("closeDate")} className={inputClass} />
-                    </div>
+                    <TextField
+                        label={
+                            <>
+                                Close Date <span className="text-slate-400 font-normal">(optional)</span>
+                            </>
+                        }
+                        type="date"
+                        {...register("closeDate")}
+                    />
                 )}
             </div>
 
-            {/* Description */}
-            <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                    Description <span className="text-slate-400 font-normal">(optional)</span>
-                </label>
-                <textarea
-                    {...register("description")}
-                    placeholder="Brief summary of the case…"
-                    rows={3}
-                    className={`${inputClass} resize-none`}
-                />
-            </div>
+            <TextAreaField
+                label={
+                    <>
+                        Description <span className="text-slate-400 font-normal">(optional)</span>
+                    </>
+                }
+                placeholder="Brief summary of the case…"
+                rows={3}
+                {...register("description")}
+            />
 
             <div className="flex gap-3 pt-2">
                 <button

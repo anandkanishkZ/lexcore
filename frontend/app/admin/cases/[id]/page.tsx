@@ -5,6 +5,8 @@ import DocumentsPanel from "./_components/DocumentsPanel";
 import DocumentRequestsPanel from "./_components/DocumentRequestsPanel";
 import MessagesPanel from "./_components/MessagesPanel";
 import CaseSummaryPanel from "./_components/CaseSummaryPanel";
+import StatusBadge from "../../_components/StatusBadge";
+import { statusTone, statusLabel } from "../_components/constants";
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -19,13 +21,6 @@ interface PageProps {
         sortOrder?: string;
     }>;
 }
-
-const statusStyles: Record<string, string> = {
-    open: "bg-emerald-50 text-emerald-700",
-    pending: "bg-amber-50 text-amber-700",
-    closed: "bg-slate-100 text-slate-500",
-    "on hold": "bg-blue-50 text-blue-600",
-};
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
     return (
@@ -133,13 +128,7 @@ export default async function CaseDetailPage({ params, searchParams }: PageProps
                 {/* Status + Type row */}
                 <div className="grid grid-cols-2 gap-4">
                     <Field label="Status">
-                        <span
-                            className={`inline-block px-2.5 py-0.5 rounded-full text-xs capitalize ${
-                                statusStyles[c.status] ?? "bg-slate-100 text-slate-600"
-                            }`}
-                        >
-                            {c.status}
-                        </span>
+                        <StatusBadge tone={statusTone[c.status] ?? "neutral"} label={statusLabel[c.status] ?? c.status} />
                     </Field>
                     <Field label="Case Type">
                         <span className="capitalize">{c.type}</span>

@@ -1,9 +1,17 @@
-export const statusStyles: Record<string, string> = {
-    draft: "bg-slate-100 text-slate-500",
-    sent: "bg-blue-50 text-blue-600",
-    paid: "bg-emerald-50 text-emerald-700",
-    overdue: "bg-red-50 text-red-600",
-    void: "bg-slate-100 text-slate-400 line-through",
+import type { StatusTone } from "../../_components/StatusBadge";
+
+export const statusTone: Record<string, StatusTone> = {
+    draft: "neutral",
+    sent: "info",
+    paid: "success",
+    overdue: "danger",
+    void: "neutral",
+};
+
+/** Only "void" needs this — a voided invoice is visually struck through on
+ * top of its neutral tone, distinct from a plain draft. */
+export const statusStrikethrough: Record<string, boolean> = {
+    void: true,
 };
 
 export const statusLabel: Record<string, string> = {
@@ -30,6 +38,16 @@ export function displayStatus(status: string, dueDate: string): string {
     return status;
 }
 
-export function formatCurrency(amount: number): string {
-    return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(amount);
+/** [currency] should be the firm's configured ISO 4217 code (Firm Settings
+ * → Currency — see fetchFirmSettingsAction), not hardcoded — a firm billing
+ * in NPR or EUR should never see "$" on their own invoices. Falls back to
+ * a plain "CODE amount" format if the configured value isn't a currency
+ * Intl recognizes (it's a free-text field, so a typo shouldn't crash the
+ * page — just render less prettily). */
+export function formatCurrency(amount: number, currency = "USD"): string {
+    try {
+        return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(amount);
+    } catch {
+        return `${currency} ${amount.toFixed(2)}`;
+    }
 }

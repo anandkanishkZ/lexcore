@@ -12,7 +12,8 @@ import {
     useSensors,
 } from "@dnd-kit/core";
 import { updateCaseAction } from "@/lib/actions/case";
-import { boardStatuses, statusLabel, statusStyles, typeLabel } from "./constants";
+import StatusBadge from "../../_components/StatusBadge";
+import { boardStatuses, statusLabel, statusTone, typeLabel } from "./constants";
 import type { CaseRow } from "./CasesTable";
 
 function BoardCard({ c }: { c: CaseRow }) {
@@ -61,13 +62,7 @@ function BoardColumn({ status, cases }: { status: string; cases: CaseRow[] }) {
             }`}
         >
             <div className="flex items-center justify-between mb-3 px-1">
-                <span
-                    className={`inline-block px-2 py-0.5 rounded-full text-xs capitalize ${
-                        statusStyles[status] ?? "bg-slate-100 text-slate-600"
-                    }`}
-                >
-                    {statusLabel[status] ?? status}
-                </span>
+                <StatusBadge tone={statusTone[status] ?? "neutral"} label={statusLabel[status] ?? status} />
                 <span className="text-xs text-slate-400">{cases.length}</span>
             </div>
             <div className="space-y-2 min-h-16">

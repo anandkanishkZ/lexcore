@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { X } from "lucide-react";
 import { taskSchema, TaskFormData } from "./schema";
 import { createTaskAction, updateTaskAction } from "@/lib/actions/task";
+import { TextField, TextAreaField, SelectField } from "../../_components/FormField";
 
 interface MemberOption {
     _id: string;
@@ -28,9 +29,6 @@ interface TaskFormModalProps {
     onClose: () => void;
     onSuccess: () => void;
 }
-
-const inputClass =
-    "w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition bg-white";
 
 export default function TaskFormModal({
     mode,
@@ -90,69 +88,58 @@ export default function TaskFormModal({
                         </p>
                     )}
 
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Title</label>
-                        <input type="text" {...register("title")} className={inputClass} />
-                        {errors.title && <span className="mt-1 block text-xs text-red-500">{errors.title.message}</span>}
-                    </div>
+                    <TextField label="Title" type="text" error={errors.title?.message} {...register("title")} />
 
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                            Description <span className="text-slate-400 font-normal">(optional)</span>
-                        </label>
-                        <textarea {...register("description")} rows={3} className={`${inputClass} resize-none`} />
+                    <TextAreaField
+                        label={
+                            <>
+                                Description <span className="text-slate-400 font-normal">(optional)</span>
+                            </>
+                        }
+                        rows={3}
+                        {...register("description")}
+                    />
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <SelectField label="Priority" {...register("priority")}>
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                        </SelectField>
+                        <SelectField label="Status" {...register("status")}>
+                            <option value="todo">To Do</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="done">Done</option>
+                        </SelectField>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Priority</label>
-                            <select {...register("priority")} className={inputClass}>
-                                <option value="low">Low</option>
-                                <option value="medium">Medium</option>
-                                <option value="high">High</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Status</label>
-                            <select {...register("status")} className={inputClass}>
-                                <option value="todo">To Do</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="done">Done</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Due Date</label>
-                            <input type="date" {...register("dueDate")} className={inputClass} />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Assignee</label>
-                            <select {...register("assignee")} className={inputClass}>
-                                <option value="">— Unassigned —</option>
-                                {members.map((m) => (
-                                    <option key={m._id} value={m._id}>
-                                        {m.firstName} {m.lastName}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                            Linked Case <span className="text-slate-400 font-normal">(optional)</span>
-                        </label>
-                        <select {...register("case")} className={inputClass}>
-                            <option value="">— None —</option>
-                            {cases.map((c) => (
-                                <option key={c._id} value={c._id}>
-                                    {c.title} ({c.caseNumber})
+                        <TextField label="Due Date" type="date" {...register("dueDate")} />
+                        <SelectField label="Assignee" {...register("assignee")}>
+                            <option value="">— Unassigned —</option>
+                            {members.map((m) => (
+                                <option key={m._id} value={m._id}>
+                                    {m.firstName} {m.lastName}
                                 </option>
                             ))}
-                        </select>
+                        </SelectField>
                     </div>
+
+                    <SelectField
+                        label={
+                            <>
+                                Linked Case <span className="text-slate-400 font-normal">(optional)</span>
+                            </>
+                        }
+                        {...register("case")}
+                    >
+                        <option value="">— None —</option>
+                        {cases.map((c) => (
+                            <option key={c._id} value={c._id}>
+                                {c.title} ({c.caseNumber})
+                            </option>
+                        ))}
+                    </SelectField>
 
                     <div className="flex gap-3 pt-2">
                         <button

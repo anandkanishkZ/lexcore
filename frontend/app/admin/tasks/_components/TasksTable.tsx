@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
-import DeleteTaskModal from "./DeleteTaskModal";
-import { statusStyles, statusLabel, priorityStyles } from "./constants";
+import ConfirmModal from "../../_components/ConfirmModal";
+import StatusBadge from "../../_components/StatusBadge";
+import { deleteTaskAction } from "@/lib/actions/task";
+import { statusTone, statusLabel, priorityTone, priorityLabel } from "./constants";
 
 export interface TaskRow {
     _id: string;
@@ -61,13 +63,7 @@ export default function TasksTable({
                                         )}
                                     </td>
                                     <td className="px-5 py-3.5 hidden sm:table-cell">
-                                        <span
-                                            className={`inline-block px-2 py-0.5 rounded-full text-xs capitalize ${
-                                                priorityStyles[t.priority] ?? "bg-slate-100 text-slate-600"
-                                            }`}
-                                        >
-                                            {t.priority}
-                                        </span>
+                                        <StatusBadge tone={priorityTone[t.priority] ?? "neutral"} label={priorityLabel[t.priority] ?? t.priority} />
                                     </td>
                                     <td className="px-5 py-3.5 text-slate-500 hidden md:table-cell">
                                         {t.assignee ? `${t.assignee.firstName} ${t.assignee.lastName}` : (
@@ -78,13 +74,7 @@ export default function TasksTable({
                                         {t.dueDate ? new Date(t.dueDate).toLocaleDateString() : "—"}
                                     </td>
                                     <td className="px-5 py-3.5">
-                                        <span
-                                            className={`inline-block px-2 py-0.5 rounded-full text-xs ${
-                                                statusStyles[t.status] ?? "bg-slate-100 text-slate-600"
-                                            }`}
-                                        >
-                                            {statusLabel[t.status] ?? t.status}
-                                        </span>
+                                        <StatusBadge tone={statusTone[t.status] ?? "neutral"} label={statusLabel[t.status] ?? t.status} />
                                     </td>
                                     <td className="px-5 py-3.5 text-right">
                                         <div className="flex items-center justify-end gap-1">
@@ -112,9 +102,17 @@ export default function TasksTable({
             </div>
 
             {deleteTarget && (
-                <DeleteTaskModal
-                    taskId={deleteTarget.id}
-                    title={deleteTarget.title}
+                <ConfirmModal
+                    title="Delete task"
+                    message={
+                        <>
+                            Are you sure you want to delete <span className="font-medium text-slate-900">{deleteTarget.title}</span>? This
+                            action cannot be undone.
+                        </>
+                    }
+                    confirmLabel="Delete"
+                    pendingLabel="Deleting..."
+                    action={() => deleteTaskAction(deleteTarget.id)}
                     onClose={() => setDeleteTarget(null)}
                     onSuccess={() => {
                         setDeleteTarget(null);

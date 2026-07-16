@@ -7,6 +7,7 @@ import { useState, useTransition } from "react";
 import { X } from "lucide-react";
 import { recordPaymentAction } from "@/lib/actions/invoice";
 import { paymentMethodLabel } from "../../_components/constants";
+import { TextField, TextAreaField, SelectField } from "../../../_components/FormField";
 
 const paymentSchema = z.object({
     amount: z.number().min(0.01, "Amount must be greater than 0"),
@@ -15,9 +16,6 @@ const paymentSchema = z.object({
     notes: z.string().optional(),
 });
 type PaymentFormData = z.infer<typeof paymentSchema>;
-
-const inputClass =
-    "w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition bg-white";
 
 export default function RecordPaymentModal({
     invoiceId,
@@ -73,36 +71,35 @@ export default function RecordPaymentModal({
                         <p className="text-sm text-red-500 border border-red-200 bg-red-50 rounded-lg px-3 py-2">{error}</p>
                     )}
 
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Amount</label>
-                        <input type="number" step="0.01" {...register("amount", { valueAsNumber: true })} className={inputClass} />
-                        {errors.amount && <span className="mt-1 block text-xs text-red-500">{errors.amount.message}</span>}
-                    </div>
+                    <TextField label="Amount" type="number" step="0.01" error={errors.amount?.message} {...register("amount", { valueAsNumber: true })} />
 
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Method</label>
-                        <select {...register("method")} className={inputClass}>
-                            {Object.entries(paymentMethodLabel).map(([value, label]) => (
-                                <option key={value} value={value}>
-                                    {label}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                    <SelectField label="Method" {...register("method")}>
+                        {Object.entries(paymentMethodLabel).map(([value, label]) => (
+                            <option key={value} value={value}>
+                                {label}
+                            </option>
+                        ))}
+                    </SelectField>
 
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                            Date <span className="text-slate-400 font-normal">(optional, defaults to today)</span>
-                        </label>
-                        <input type="date" {...register("date")} className={inputClass} />
-                    </div>
+                    <TextField
+                        label={
+                            <>
+                                Date <span className="text-slate-400 font-normal">(optional, defaults to today)</span>
+                            </>
+                        }
+                        type="date"
+                        {...register("date")}
+                    />
 
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                            Notes <span className="text-slate-400 font-normal">(optional)</span>
-                        </label>
-                        <textarea {...register("notes")} rows={2} className={`${inputClass} resize-none`} />
-                    </div>
+                    <TextAreaField
+                        label={
+                            <>
+                                Notes <span className="text-slate-400 font-normal">(optional)</span>
+                            </>
+                        }
+                        rows={2}
+                        {...register("notes")}
+                    />
 
                     <div className="flex gap-3 pt-2">
                         <button

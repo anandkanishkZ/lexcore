@@ -3,29 +3,35 @@
 import { useState, useTransition } from "react";
 import { AlertTriangle } from "lucide-react";
 
-interface InvoiceConfirmModalProps {
+interface ConfirmModalProps {
     title: string;
     message: React.ReactNode;
     confirmLabel: string;
+    /** "Working…" — shown on the confirm button while [action] is pending. */
+    pendingLabel?: string;
+    /** true (default) for a destructive action (red) — false for a
+     * cautionary-but-not-destructive one (amber), e.g. voiding an invoice. */
     danger?: boolean;
     action: () => Promise<{ success: boolean; message?: string }>;
     onClose: () => void;
     onSuccess: () => void;
 }
 
-/** Shared confirm dialog for the invoice detail page's delete/void actions —
- * replaces a native window.confirm() with the same styled-modal pattern
- * every other destructive action in the app already uses (e.g. tasks'
- * DeleteTaskModal), for consistency. */
-export default function InvoiceConfirmModal({
+/** Shared confirm dialog for every destructive/cautionary action in the
+ * console — replaces both native `window.confirm()`/`alert()` calls and the
+ * several near-identical hand-rolled delete-confirmation modals (cases,
+ * tasks, users, invoices) that existed before this, one styled pattern
+ * instead of N copies that could each drift independently. */
+export default function ConfirmModal({
     title,
     message,
     confirmLabel,
+    pendingLabel = "Working...",
     danger = true,
     action,
     onClose,
     onSuccess,
-}: InvoiceConfirmModalProps) {
+}: ConfirmModalProps) {
     const [isPending, startTransition] = useTransition();
     const [error, setError] = useState("");
 
@@ -67,7 +73,7 @@ export default function InvoiceConfirmModal({
                             danger ? "bg-red-600 hover:bg-red-700" : "bg-brand-gold hover:bg-[#a3853a]"
                         }`}
                     >
-                        {isPending ? "Working..." : confirmLabel}
+                        {isPending ? pendingLabel : confirmLabel}
                     </button>
                     <button
                         type="button"

@@ -2,17 +2,15 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { firmSettingsSchema, FirmSettingsFormData } from "./schema";
 import { updateFirmSettingsAction } from "@/lib/actions/settings";
+import { TextField, SelectField } from "../../_components/FormField";
 
 interface FirmSettingsFormProps {
     defaultValues: FirmSettingsFormData;
     esewaSecretConfigured: boolean;
 }
-
-const inputClass =
-    "w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition bg-white";
 
 export default function FirmSettingsForm({ defaultValues, esewaSecretConfigured }: FirmSettingsFormProps) {
     const [isPending, startTransition] = useTransition();
@@ -31,6 +29,15 @@ export default function FirmSettingsForm({ defaultValues, esewaSecretConfigured 
     });
 
     const esewaEnabled = watch("esewaEnabled");
+
+    // The "saved" banner should only ever describe the form's current
+    // values, not a stale save from before the user changed something —
+    // without this it kept saying "Firm settings saved" indefinitely, even
+    // after editing a field with no further save.
+    useEffect(() => {
+        const subscription = watch(() => setSuccess(false));
+        return () => subscription.unsubscribe();
+    }, [watch]);
 
     const onSubmit = (data: FirmSettingsFormData) => {
         setError("");
@@ -62,50 +69,30 @@ export default function FirmSettingsForm({ defaultValues, esewaSecretConfigured 
                 </p>
             )}
 
-            <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Firm Name</label>
-                <input type="text" {...register("name")} className={inputClass} />
-                {errors.name && <span className="mt-1 block text-xs text-red-500">{errors.name.message}</span>}
-            </div>
+            <TextField label="Firm Name" type="text" error={errors.name?.message} {...register("name")} />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
-                    <input type="email" {...register("email")} className={inputClass} />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Phone</label>
-                    <input type="text" {...register("phone")} className={inputClass} />
-                </div>
+                <TextField label="Email" type="email" {...register("email")} />
+                <TextField label="Phone" type="text" {...register("phone")} />
             </div>
 
-            <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Address</label>
-                <input type="text" {...register("address")} className={inputClass} />
-            </div>
+            <TextField label="Address" type="text" {...register("address")} />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Website</label>
-                    <input type="text" {...register("website")} placeholder="https://…" className={inputClass} />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Currency</label>
-                    <input type="text" {...register("currency")} placeholder="USD" className={inputClass} />
-                </div>
+                <TextField label="Website" type="text" placeholder="https://…" {...register("website")} />
+                <TextField label="Currency" type="text" placeholder="USD" {...register("currency")} />
             </div>
 
-            <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                    Practice Areas <span className="text-slate-400 font-normal">(comma-separated)</span>
-                </label>
-                <input
-                    type="text"
-                    {...register("practiceAreas")}
-                    placeholder="Civil, Criminal, Corporate, Family"
-                    className={inputClass}
-                />
-            </div>
+            <TextField
+                label={
+                    <>
+                        Practice Areas <span className="text-slate-400 font-normal">(comma-separated)</span>
+                    </>
+                }
+                type="text"
+                placeholder="Civil, Criminal, Corporate, Family"
+                {...register("practiceAreas")}
+            />
 
             <div className="pt-4 mt-2 border-t border-slate-200">
                 <div className="flex items-center justify-between mb-1">
@@ -121,34 +108,27 @@ export default function FirmSettingsForm({ defaultValues, esewaSecretConfigured 
 
                 <div className={`space-y-4 ${esewaEnabled ? "" : "opacity-50"}`}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Environment</label>
-                            <select {...register("esewaEnvironment")} disabled={!esewaEnabled} className={inputClass}>
-                                <option value="test">Test</option>
-                                <option value="live">Live</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Client ID</label>
-                            <input type="text" {...register("esewaClientId")} disabled={!esewaEnabled} className={inputClass} />
-                        </div>
+                        <SelectField label="Environment" disabled={!esewaEnabled} {...register("esewaEnvironment")}>
+                            <option value="test">Test</option>
+                            <option value="live">Live</option>
+                        </SelectField>
+                        <TextField label="Client ID" type="text" disabled={!esewaEnabled} {...register("esewaClientId")} />
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                            Secret Key{" "}
-                            {secretConfigured && (
-                                <span className="ml-1 text-xs font-normal text-emerald-600">— a secret is already saved</span>
-                            )}
-                        </label>
-                        <input
-                            type="password"
-                            {...register("esewaSecret")}
-                            disabled={!esewaEnabled}
-                            placeholder={secretConfigured ? "Leave blank to keep the saved secret" : "Enter the eSewa secret key"}
-                            autoComplete="new-password"
-                            className={inputClass}
-                        />
-                    </div>
+                    <TextField
+                        label={
+                            <>
+                                Secret Key{" "}
+                                {secretConfigured && (
+                                    <span className="ml-1 text-xs font-normal text-emerald-600">— a secret is already saved</span>
+                                )}
+                            </>
+                        }
+                        type="password"
+                        disabled={!esewaEnabled}
+                        placeholder={secretConfigured ? "Leave blank to keep the saved secret" : "Enter the eSewa secret key"}
+                        autoComplete="new-password"
+                        {...register("esewaSecret")}
+                    />
                 </div>
             </div>
 

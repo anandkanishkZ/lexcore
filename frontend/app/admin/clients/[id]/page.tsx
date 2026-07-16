@@ -1,8 +1,10 @@
 import { fetchClientAction } from "@/lib/actions/client";
 import { fetchInvoicesAction } from "@/lib/actions/invoice";
+import { fetchFirmSettingsAction } from "@/lib/actions/settings";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { statusStyles, statusLabel, displayStatus, formatCurrency } from "../../billing/_components/constants";
+import { statusTone, statusLabel, displayStatus, formatCurrency } from "../../billing/_components/constants";
+import StatusBadge from "../../_components/StatusBadge";
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -10,15 +12,17 @@ interface PageProps {
 
 export default async function ClientDetailPage({ params }: PageProps) {
     const { id } = await params;
-    const [result, invoicesResult] = await Promise.all([
+    const [result, invoicesResult, settingsResult] = await Promise.all([
         fetchClientAction(id),
         fetchInvoicesAction(1, 100, undefined, id),
+        fetchFirmSettingsAction(),
     ]);
 
     if (!result.success) {
         redirect("/admin/users");
     }
 
+    const currency: string = settingsResult.success ? (settingsResult.data?.currency ?? "USD") : "USD";
     const client = result.data;
     const invoices: any[] = invoicesResult.success ? invoicesResult.data : [];
     const outstanding = invoices
@@ -174,7 +178,7 @@ export default async function ClientDetailPage({ params }: PageProps) {
                         <p className="mt-1 text-sm text-slate-900">
                             {invoices.length} invoice{invoices.length === 1 ? "" : "s"}
                             {outstanding > 0 && (
-                                <span className="text-red-600 font-medium"> &middot; {formatCurrency(outstanding)} outstanding</span>
+                                <span className="text-red-600 font-medium"> &middot; {formatCurrency(outstanding, currency)} outstanding</span>
                             )}
                         </p>
                     </div>
@@ -203,10 +207,8 @@ export default async function ClientDetailPage({ params }: PageProps) {
                                         <p className="text-xs text-slate-400 mt-0.5">Due {new Date(inv.dueDate).toLocaleDateString()}</p>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <span className="text-sm text-slate-700">{formatCurrency(inv.total)}</span>
-                                        <span className={`px-2 py-0.5 rounded-full text-xs ${statusStyles[shown] ?? "bg-slate-100 text-slate-600"}`}>
-                                            {statusLabel[shown] ?? shown}
-                                        </span>
+                                        <span className="text-sm text-slate-700">{formatCurrency(inv.total, currency)}</span>
+                                        <StatusBadge tone={statusTone[shown] ?? "neutral"} label={statusLabel[shown] ?? shown} />
                                     </div>
                                 </Link>
                             );

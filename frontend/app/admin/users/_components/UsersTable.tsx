@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { ShieldCheck, Users as UsersIcon, Eye, Pencil, Trash2, UserX, UserCheck } from "lucide-react";
-import { fetchAdminUserAction, setAdminUserActiveAction } from "@/lib/actions/admin-user";
+import { AlertCircle, ShieldCheck, Users as UsersIcon, Eye, Pencil, Trash2, UserX, UserCheck, X } from "lucide-react";
+import { deleteAdminUserAction, fetchAdminUserAction, setAdminUserActiveAction } from "@/lib/actions/admin-user";
 import UserFormModal from "./UserFormModal";
-import DeleteUserModal from "./DeleteUserModal";
+import ConfirmModal from "../../_components/ConfirmModal";
 import type { CreateUserFormData } from "./userSchema";
 
 export interface Member {
@@ -44,16 +44,18 @@ export default function UsersTable({ members }: { members: Member[] }) {
     const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
     const [isPending, startTransition] = useTransition();
     const [togglingId, setTogglingId] = useState<string | null>(null);
+    const [toggleError, setToggleError] = useState("");
 
     const toggleActive = (id: string, nextActive: boolean) => {
         setTogglingId(id);
+        setToggleError("");
         startTransition(async () => {
             const result = await setAdminUserActiveAction(id, nextActive);
             setTogglingId(null);
             if (result.success) {
                 router.refresh();
             } else {
-                alert(result.message || "Failed to update status");
+                setToggleError(result.message || "Failed to update status");
             }
         });
     };
@@ -93,6 +95,15 @@ export default function UsersTable({ members }: { members: Member[] }) {
 
     return (
         <>
+            {toggleError && (
+                <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-600">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <p className="flex-1">{toggleError}</p>
+                    <button onClick={() => setToggleError("")} className="text-red-400 hover:text-red-600 transition" title="Dismiss">
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+            )}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
                 <table className="w-full text-sm">
                     <thead>
@@ -254,9 +265,17 @@ export default function UsersTable({ members }: { members: Member[] }) {
             )}
 
             {deleteTarget && (
-                <DeleteUserModal
-                    userId={deleteTarget.id}
-                    name={deleteTarget.name}
+                <ConfirmModal
+                    title="Delete user"
+                    message={
+                        <>
+                            Are you sure you want to delete <span className="font-medium text-slate-900">{deleteTarget.name}</span>? This
+                            action cannot be undone.
+                        </>
+                    }
+                    confirmLabel="Delete"
+                    pendingLabel="Deleting..."
+                    action={() => deleteAdminUserAction(deleteTarget.id)}
                     onClose={() => setDeleteTarget(null)}
                     onSuccess={() => {
                         setDeleteTarget(null);

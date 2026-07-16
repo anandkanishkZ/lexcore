@@ -1,16 +1,19 @@
 import { AlertCircle, Briefcase, FolderOpen, DollarSign, CheckCircle2 } from "lucide-react";
 import { fetchCasesByStatusAction, fetchRevenueByMonthAction, fetchTaskCompletionAction } from "@/lib/actions/report";
+import { fetchFirmSettingsAction } from "@/lib/actions/settings";
 import StatCard from "../_components/StatCard";
 import CasesByStatusChart from "./_components/CasesByStatusChart";
 import RevenueByMonthChart from "./_components/RevenueByMonthChart";
 import TaskCompletionSection from "./_components/TaskCompletionSection";
 
 export default async function ReportsPage() {
-    const [casesResult, revenueResult, tasksResult] = await Promise.all([
+    const [casesResult, revenueResult, tasksResult, settingsResult] = await Promise.all([
         fetchCasesByStatusAction(),
         fetchRevenueByMonthAction(),
         fetchTaskCompletionAction(),
+        fetchFirmSettingsAction(),
     ]);
+    const currency: string = settingsResult.success ? (settingsResult.data?.currency ?? "USD") : "USD";
 
     if (!casesResult.success || !revenueResult.success || !tasksResult.success) {
         const message = !casesResult.success
@@ -49,7 +52,7 @@ export default async function ReportsPage() {
                 <StatCard label="Open Cases" value={openCases} icon={FolderOpen} tone="positive" />
                 <StatCard
                     label="Revenue (6mo)"
-                    value={new Intl.NumberFormat(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(
+                    value={new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits: 0 }).format(
                         totalRevenue
                     )}
                     icon={DollarSign}
@@ -62,7 +65,7 @@ export default async function ReportsPage() {
                 <TaskCompletionSection data={taskCompletion} />
             </div>
 
-            <RevenueByMonthChart data={revenueByMonth} />
+            <RevenueByMonthChart data={revenueByMonth} currency={currency} />
         </div>
     );
 }

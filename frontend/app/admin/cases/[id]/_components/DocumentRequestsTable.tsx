@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { Plus, X, FileCheck2, Clock, Ban } from "lucide-react";
 import { cancelDocumentRequestAction } from "@/lib/actions/document-request";
 import NewDocumentRequestModal from "./NewDocumentRequestModal";
+import StatusBadge, { type StatusTone } from "../../../_components/StatusBadge";
 
 export interface DocumentRequestRow {
     _id: string;
@@ -16,10 +17,10 @@ export interface DocumentRequestRow {
     createdAt: string;
 }
 
-const statusStyles: Record<string, string> = {
-    pending: "bg-amber-50 text-amber-700",
-    fulfilled: "bg-emerald-50 text-emerald-700",
-    cancelled: "bg-slate-100 text-slate-500",
+const statusTone: Record<string, StatusTone> = {
+    pending: "warning",
+    fulfilled: "success",
+    cancelled: "neutral",
 };
 
 const statusIcon: Record<string, typeof Clock> = {
@@ -120,14 +121,7 @@ export default function DocumentRequestsTable({
                                                 {formatDate(r.createdAt)}
                                             </td>
                                             <td className="px-5 py-3.5">
-                                                <span
-                                                    className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs capitalize ${
-                                                        statusStyles[r.status] ?? "bg-slate-100 text-slate-600"
-                                                    }`}
-                                                >
-                                                    <Icon className="w-3 h-3" />
-                                                    {r.status}
-                                                </span>
+                                                <StatusBadge tone={statusTone[r.status] ?? "neutral"} label={r.status} icon={Icon} className="capitalize" />
                                             </td>
                                             <td className="px-5 py-3.5 text-right">
                                                 {r.status === "pending" && (

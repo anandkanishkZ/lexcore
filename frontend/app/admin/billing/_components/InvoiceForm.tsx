@@ -8,6 +8,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { invoiceSchema, InvoiceFormData } from "./schema";
 import { createInvoiceAction } from "@/lib/actions/invoice";
 import { formatCurrency } from "./constants";
+import { TextField, TextAreaField, SelectField, fieldClass } from "../../_components/FormField";
 
 interface ClientOption {
     _id: string;
@@ -25,12 +26,10 @@ interface CaseOption {
 interface InvoiceFormProps {
     clients: ClientOption[];
     cases: CaseOption[];
+    currency?: string;
 }
 
-const inputClass =
-    "w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 transition bg-white";
-
-export default function InvoiceForm({ clients, cases }: InvoiceFormProps) {
+export default function InvoiceForm({ clients, cases, currency = "USD" }: InvoiceFormProps) {
     const [isPending, startTransition] = useTransition();
     const [error, setError] = useState("");
     const router = useRouter();
@@ -90,31 +89,29 @@ export default function InvoiceForm({ clients, cases }: InvoiceFormProps) {
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Client</label>
-                    <select {...register("client")} className={inputClass}>
-                        <option value="">— Select a client —</option>
-                        {clients.map((c) => (
-                            <option key={c._id} value={c._id}>
-                                {c.firstName} {c.lastName} ({c.email})
-                            </option>
-                        ))}
-                    </select>
-                    {errors.client && <span className="mt-1 block text-xs text-red-500">{errors.client.message}</span>}
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                        Linked Case <span className="text-slate-400 font-normal">(optional)</span>
-                    </label>
-                    <select {...register("case")} className={inputClass}>
-                        <option value="">— None —</option>
-                        {cases.map((c) => (
-                            <option key={c._id} value={c._id}>
-                                {c.title} ({c.caseNumber})
-                            </option>
-                        ))}
-                    </select>
-                </div>
+                <SelectField label="Client" error={errors.client?.message} {...register("client")}>
+                    <option value="">— Select a client —</option>
+                    {clients.map((c) => (
+                        <option key={c._id} value={c._id}>
+                            {c.firstName} {c.lastName} ({c.email})
+                        </option>
+                    ))}
+                </SelectField>
+                <SelectField
+                    label={
+                        <>
+                            Linked Case <span className="text-slate-400 font-normal">(optional)</span>
+                        </>
+                    }
+                    {...register("case")}
+                >
+                    <option value="">— None —</option>
+                    {cases.map((c) => (
+                        <option key={c._id} value={c._id}>
+                            {c.title} ({c.caseNumber})
+                        </option>
+                    ))}
+                </SelectField>
             </div>
 
             <div>
@@ -151,7 +148,8 @@ export default function InvoiceForm({ clients, cases }: InvoiceFormProps) {
                                     <input
                                         {...register(`items.${index}.description`)}
                                         placeholder="Item description"
-                                        className={inputClass}
+                                        aria-label="Item description"
+                                        className={fieldClass}
                                     />
                                     {errors.items?.[index]?.description && (
                                         <span className="mt-1 block text-xs text-red-500">
@@ -162,17 +160,19 @@ export default function InvoiceForm({ clients, cases }: InvoiceFormProps) {
                                 <input
                                     type="number"
                                     step="0.01"
+                                    aria-label="Quantity"
                                     {...register(`items.${index}.quantity`, { valueAsNumber: true })}
-                                    className={inputClass}
+                                    className={fieldClass}
                                 />
                                 <input
                                     type="number"
                                     step="0.01"
+                                    aria-label="Rate"
                                     {...register(`items.${index}.rate`, { valueAsNumber: true })}
-                                    className={inputClass}
+                                    className={fieldClass}
                                 />
                                 <div className="flex items-center justify-end h-[42px] text-sm font-medium text-slate-700">
-                                    {formatCurrency(qty * rate)}
+                                    {formatCurrency(qty * rate, currency)}
                                 </div>
                                 <button
                                     type="button"
@@ -190,36 +190,32 @@ export default function InvoiceForm({ clients, cases }: InvoiceFormProps) {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Due Date</label>
-                    <input type="date" {...register("dueDate")} className={inputClass} />
-                    {errors.dueDate && <span className="mt-1 block text-xs text-red-500">{errors.dueDate.message}</span>}
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Tax Rate (%)</label>
-                    <input type="number" step="0.01" {...register("taxRate", { valueAsNumber: true })} className={inputClass} />
-                </div>
+                <TextField label="Due Date" type="date" error={errors.dueDate?.message} {...register("dueDate")} />
+                <TextField label="Tax Rate (%)" type="number" step="0.01" {...register("taxRate", { valueAsNumber: true })} />
             </div>
 
-            <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                    Notes <span className="text-slate-400 font-normal">(optional)</span>
-                </label>
-                <textarea {...register("notes")} rows={2} className={`${inputClass} resize-none`} />
-            </div>
+            <TextAreaField
+                label={
+                    <>
+                        Notes <span className="text-slate-400 font-normal">(optional)</span>
+                    </>
+                }
+                rows={2}
+                {...register("notes")}
+            />
 
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-1.5 ml-auto max-w-xs">
                 <div className="flex justify-between text-sm text-slate-500">
                     <span>Subtotal</span>
-                    <span>{formatCurrency(subtotal)}</span>
+                    <span>{formatCurrency(subtotal, currency)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-slate-500">
                     <span>Tax ({Number(taxRate) || 0}%)</span>
-                    <span>{formatCurrency(tax)}</span>
+                    <span>{formatCurrency(tax, currency)}</span>
                 </div>
                 <div className="flex justify-between text-base font-semibold text-slate-900 pt-1.5 border-t border-slate-200">
                     <span>Total</span>
-                    <span>{formatCurrency(total)}</span>
+                    <span>{formatCurrency(total, currency)}</span>
                 </div>
             </div>
 

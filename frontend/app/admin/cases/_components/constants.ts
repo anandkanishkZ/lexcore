@@ -1,8 +1,10 @@
-export const statusStyles: Record<string, string> = {
-    open: "bg-emerald-50 text-emerald-700",
-    pending: "bg-amber-50 text-amber-700",
-    closed: "bg-slate-100 text-slate-500",
-    "on hold": "bg-blue-50 text-blue-600",
+import type { StatusTone } from "../../_components/StatusBadge";
+
+export const statusTone: Record<string, StatusTone> = {
+    open: "success",
+    pending: "warning",
+    closed: "neutral",
+    "on hold": "info",
 };
 
 export const typeLabel: Record<string, string> = {

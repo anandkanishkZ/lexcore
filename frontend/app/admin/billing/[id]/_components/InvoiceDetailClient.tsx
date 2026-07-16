@@ -7,8 +7,9 @@ import Link from "next/link";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { deleteInvoiceAction, voidInvoiceAction } from "@/lib/actions/invoice";
 import RecordPaymentModal from "./RecordPaymentModal";
-import InvoiceConfirmModal from "./InvoiceConfirmModal";
-import { statusStyles, statusLabel, displayStatus, paymentMethodLabel, formatCurrency } from "../../_components/constants";
+import ConfirmModal from "../../../_components/ConfirmModal";
+import StatusBadge from "../../../_components/StatusBadge";
+import { statusTone, statusStrikethrough, statusLabel, displayStatus, paymentMethodLabel, formatCurrency } from "../../_components/constants";
 
 interface InvoiceItem {
     description: string;
@@ -48,6 +49,7 @@ interface FirmSettings {
     address?: string;
     phone?: string;
     email?: string;
+    currency?: string;
 }
 
 export default function InvoiceDetailClient({
@@ -119,11 +121,14 @@ export default function InvoiceDetailClient({
                     <div>
                         <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Invoice</p>
                         <h1 className="text-2xl font-semibold text-slate-900 font-mono mt-1">{invoice.invoiceNumber}</h1>
-                        <span
-                            className={`inline-block mt-2 px-2.5 py-1 rounded-full text-xs font-medium capitalize ${statusStyles[shownStatus] ?? "bg-slate-100 text-slate-600"}`}
-                        >
-                            {statusLabel[shownStatus] ?? shownStatus}
-                        </span>
+                        <div className="mt-2">
+                            <StatusBadge
+                                tone={statusTone[shownStatus] ?? "neutral"}
+                                label={statusLabel[shownStatus] ?? shownStatus}
+                                strikethrough={statusStrikethrough[shownStatus]}
+                                className="text-xs font-medium"
+                            />
+                        </div>
                     </div>
                     <div className="text-right">
                         <p className="text-base font-semibold text-slate-900">{firm.name}</p>
@@ -169,8 +174,8 @@ export default function InvoiceDetailClient({
                             <tr key={i}>
                                 <td className="py-2.5 text-slate-700">{item.description}</td>
                                 <td className="py-2.5 text-right text-slate-500">{item.quantity}</td>
-                                <td className="py-2.5 text-right text-slate-500">{formatCurrency(item.rate)}</td>
-                                <td className="py-2.5 text-right text-slate-900 font-medium">{formatCurrency(item.amount)}</td>
+                                <td className="py-2.5 text-right text-slate-500">{formatCurrency(item.rate, firm.currency)}</td>
+                                <td className="py-2.5 text-right text-slate-900 font-medium">{formatCurrency(item.amount, firm.currency)}</td>
                             </tr>
                         ))}
                     </tbody>
@@ -180,25 +185,25 @@ export default function InvoiceDetailClient({
                     <div className="w-64 space-y-1.5">
                         <div className="flex justify-between text-sm text-slate-500">
                             <span>Subtotal</span>
-                            <span>{formatCurrency(invoice.subtotal)}</span>
+                            <span>{formatCurrency(invoice.subtotal, firm.currency)}</span>
                         </div>
                         <div className="flex justify-between text-sm text-slate-500">
                             <span>Tax ({invoice.taxRate}%)</span>
-                            <span>{formatCurrency(invoice.tax)}</span>
+                            <span>{formatCurrency(invoice.tax, firm.currency)}</span>
                         </div>
                         <div className="flex justify-between text-base font-semibold text-slate-900 pt-1.5 border-t border-slate-200">
                             <span>Total</span>
-                            <span>{formatCurrency(invoice.total)}</span>
+                            <span>{formatCurrency(invoice.total, firm.currency)}</span>
                         </div>
                         {invoice.paidAmount > 0 && (
                             <div className="flex justify-between text-sm text-emerald-600">
                                 <span>Paid</span>
-                                <span>-{formatCurrency(invoice.paidAmount)}</span>
+                                <span>-{formatCurrency(invoice.paidAmount, firm.currency)}</span>
                             </div>
                         )}
                         <div className="flex justify-between text-base font-semibold text-slate-900">
                             <span>Amount Due</span>
-                            <span>{formatCurrency(amountDue)}</span>
+                            <span>{formatCurrency(amountDue, firm.currency)}</span>
                         </div>
                     </div>
                 </div>
@@ -217,7 +222,7 @@ export default function InvoiceDetailClient({
                             {payments.map((p) => (
                                 <div key={p._id} className="flex items-center justify-between text-sm py-1.5">
                                     <div>
-                                        <span className="text-slate-700 font-medium">{formatCurrency(p.amount)}</span>
+                                        <span className="text-slate-700 font-medium">{formatCurrency(p.amount, firm.currency)}</span>
                                         <span className="text-slate-400"> via {paymentMethodLabel[p.method] ?? p.method}</span>
                                         <span className="text-slate-300 font-mono text-xs ml-2">{p.receiptNumber}</span>
                                     </div>
@@ -242,7 +247,7 @@ export default function InvoiceDetailClient({
             )}
 
             {confirmAction === "delete" && (
-                <InvoiceConfirmModal
+                <ConfirmModal
                     title="Delete invoice"
                     message={
                         <>
@@ -259,7 +264,7 @@ export default function InvoiceDetailClient({
             )}
 
             {confirmAction === "void" && (
-                <InvoiceConfirmModal
+                <ConfirmModal
                     title="Void invoice"
                     message={
                         <>
