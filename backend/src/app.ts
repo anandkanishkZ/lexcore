@@ -4,6 +4,8 @@ import helmet from "helmet";
 import morgan from "morgan";
 import multer from "multer";
 import mongoose from "mongoose";
+import swaggerUi from "swagger-ui-express";
+import { openApiDocument } from "./openapi/document";
 import userRouter from "./routes/user.route";
 import clientRouter from "./routes/client.route";
 import caseRouter from "./routes/case.route";
@@ -39,6 +41,12 @@ app.use(morgan("combined"));
 
 // Serve uploaded files (e.g. profile pictures) at /uploads/<filename>.
 app.use("/uploads", express.static(UPLOAD_DIR));
+
+// Interactive API docs — generated from the same Zod schemas every route
+// already validates requests against (src/openapi/), so the docs can't
+// drift from what the DTOs actually accept the way hand-written docs would.
+app.get("/api/v1/api-docs.json", (req: Request, res: Response) => res.json(openApiDocument));
+app.use("/api/v1/api-docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
 
 app.get("/api/v1/health", (req: Request, res: Response) => {
     const dbConnected = mongoose.connection.readyState === 1;
