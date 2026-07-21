@@ -2,6 +2,7 @@
 
 import {
     fetchDocumentsApi,
+    fetchClientDocumentsApi,
     fetchTrashApi,
     fetchMoveTargetsApi,
     fetchRecentDocumentsApi,
@@ -36,6 +37,16 @@ export async function fetchDocumentsAction(caseId: string, folderId?: string, fi
         return await fetchDocumentsApi(token, caseId, folderId, filters);
     } catch (error) {
         return { success: false, message: errorMessage(error, "Failed to fetch documents") };
+    }
+}
+
+export async function fetchClientDocumentsAction(clientId: string) {
+    try {
+        const token = await getTokenCookie();
+        if (!token) return { success: false, message: "Not authenticated" };
+        return await fetchClientDocumentsApi(token, clientId);
+    } catch (error) {
+        return { success: false, message: errorMessage(error, "Failed to fetch client documents") };
     }
 }
 

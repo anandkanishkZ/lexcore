@@ -26,6 +26,15 @@ export class MessageController {
         }
     }
 
+    async getHistoryForClient(req: Request, res: Response) {
+        try {
+            const data = await messageService.getHistoryForClient(req.params.clientId as string);
+            return ApiResponseHelper.success(res, data, "Client messages fetched successfully", 200);
+        } catch (error: any) {
+            return handleControllerError(res, error, "MessageController");
+        }
+    }
+
     async send(req: Request, res: Response) {
         try {
             const caseId = (req.query.case as string) || "";

@@ -4,6 +4,10 @@ export interface TaskQuery {
     status?: string;
     assignee?: string;
     case?: string;
+    // Bare case ids already resolved from a client id (see TaskService.getAll)
+    // — a client isn't a field on Task, so this arrives pre-resolved rather
+    // than as a `client` id for the repository to look up itself.
+    caseIn?: string[];
 }
 
 export class TaskMongoRepository {
@@ -12,6 +16,7 @@ export class TaskMongoRepository {
         if (query.status) filter.status = query.status;
         if (query.assignee) filter.assignee = query.assignee;
         if (query.case) filter.case = query.case;
+        if (query.caseIn) filter.case = { $in: query.caseIn };
 
         // The frontend renders this as a single Kanban board / list, not a
         // paginated table, so it needs the whole relevant set rather than a

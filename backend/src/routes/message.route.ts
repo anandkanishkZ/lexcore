@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { MessageController } from "../controllers/message.controller";
-import { authorizedMiddleware } from "../middlewares/authorized.middleware";
+import { authorizedMiddleware, staffMiddleware } from "../middlewares/authorized.middleware";
 import { messageAttachmentUpload } from "../middlewares/message-attachment-upload.middleware";
 import { messageAttachmentRateLimiter } from "../middlewares/rate-limit.middleware";
 import { CaseService } from "../services/case.service";
@@ -34,6 +34,7 @@ async function requireCaseQueryChatAccess(req: Request, res: Response, next: Nex
 // through the same MessageService.send()/getHistory().
 messageRouter.use(authorizedMiddleware);
 messageRouter.get("/", messageController.getHistory);
+messageRouter.get("/client/:clientId", staffMiddleware, messageController.getHistoryForClient);
 messageRouter.post("/", messageController.send);
 
 // Attachments are REST-only — multipart doesn't travel over the Socket.io

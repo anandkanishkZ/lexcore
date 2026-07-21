@@ -8,6 +8,14 @@ export async function fetchMessagesApi(token: string, caseId: string) {
     return res.json();
 }
 
+export async function fetchClientMessagesApi(token: string, clientId: string) {
+    const res = await fetch(`${API_URL}/api/v1/messages/client/${clientId}`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.json();
+}
+
 export async function sendMessageApi(token: string, caseId: string, content: string) {
     const res = await fetch(`${API_URL}/api/v1/messages?case=${caseId}`, {
         method: "POST",

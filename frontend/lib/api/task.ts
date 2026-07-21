@@ -1,10 +1,11 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8089";
 
-export async function fetchTasksApi(token: string, status?: string, assignee?: string, caseId?: string) {
+export async function fetchTasksApi(token: string, status?: string, assignee?: string, caseId?: string, client?: string) {
     const params = new URLSearchParams();
     if (status) params.set("status", status);
     if (assignee) params.set("assignee", assignee);
     if (caseId) params.set("case", caseId);
+    if (client) params.set("client", client);
 
     const res = await fetch(`${API_URL}/api/v1/tasks?${params}`, {
         method: "GET",

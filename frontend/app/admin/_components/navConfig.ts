@@ -42,7 +42,7 @@ export const navSections: NavSection[] = [
                 label: "Users",
                 href: "/admin/users",
                 icon: Users,
-                matchPrefixes: ["/admin/clients"],
+                matchPrefixes: ["/admin/clients", "/admin/users/"],
             },
             { label: "Cases", href: "/admin/cases", icon: Briefcase },
             { label: "Case Requests", href: "/admin/case-requests", icon: Inbox },
@@ -70,6 +70,7 @@ export function getPageTitle(pathname: string): string {
     if (pathname === "/admin/clients/create") return "Add Client";
     if (pathname.match(/^\/admin\/clients\/[^/]+\/edit$/)) return "Edit Client";
     if (pathname.match(/^\/admin\/clients\/[^/]+$/)) return "Client Details";
+    if (pathname.match(/^\/admin\/users\/[^/]+$/)) return "User Details";
     if (pathname === "/admin/cases") return "Cases";
     if (pathname === "/admin/case-requests") return "Case Requests";
     if (pathname === "/admin/cases/create") return "New Case";

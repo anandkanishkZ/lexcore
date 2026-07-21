@@ -1,5 +1,6 @@
 import { TaskMongoRepository, TaskQuery } from "../repositories/task.repository";
 import { UserMongoRepository } from "../repositories/user.repository";
+import { CaseMongoRepository } from "../repositories/case.repository";
 import { CreateTaskDTO, UpdateTaskDTO } from "../dtos/task.dto";
 import { ITask } from "../models/task.model";
 import { HttpException } from "../exceptions/http-exception";
@@ -7,6 +8,7 @@ import { logAudit } from "../utils/audit-log.util";
 
 const taskRepository = new TaskMongoRepository();
 const userRepository = new UserMongoRepository();
+const caseRepository = new CaseMongoRepository();
 
 type RequestingUser = { role: string; userId: string };
 
@@ -21,8 +23,16 @@ export class TaskService {
         }
     }
 
-    async getAll(query: TaskQuery): Promise<ITask[]> {
-        return taskRepository.getAll(query);
+    async getAll(query: TaskQuery & { client?: string }): Promise<ITask[]> {
+        const { client, ...rest } = query;
+        if (!client) return taskRepository.getAll(rest);
+
+        // Task has no client field — resolve to this client's case ids first
+        // so a client-detail page can show "every task across all their
+        // cases" in one request.
+        const caseIds = await caseRepository.getIdsForClient(client);
+        if (caseIds.length === 0) return [];
+        return taskRepository.getAll({ ...rest, caseIn: caseIds });
     }
 
     async getById(id: string): Promise<ITask> {

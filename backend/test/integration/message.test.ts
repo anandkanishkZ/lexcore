@@ -213,4 +213,82 @@ describe("case messaging (client <-> assigned staff)", () => {
             .set("Authorization", `Bearer ${clientToken}`);
         expect(reFetched.body.data[0].readAt).toBeTruthy();
     });
+
+    describe("GET /messages/client/:clientId (staff-facing, cross-case)", () => {
+        it("returns every message across all of a client's cases", async () => {
+            const { token: adminToken } = await createUserAndToken({ role: "admin" });
+            const { clientToken, client, caseId: firstCaseId } = await makeLinkedClientAndCase(adminToken);
+
+            const secondCase = await request(app)
+                .post("/api/v1/cases")
+                .set("Authorization", `Bearer ${adminToken}`)
+                .send({ title: "Second matter", type: "civil", status: "open", client: client._id.toString() });
+            const secondCaseId = secondCase.body.data._id;
+
+            await request(app)
+                .post(`/api/v1/messages?case=${firstCaseId}`)
+                .set("Authorization", `Bearer ${clientToken}`)
+                .send({ content: "About case one" });
+            await request(app)
+                .post(`/api/v1/messages?case=${secondCaseId}`)
+                .set("Authorization", `Bearer ${clientToken}`)
+                .send({ content: "About case two" });
+
+            const res = await request(app)
+                .get(`/api/v1/messages/client/${client._id.toString()}`)
+                .set("Authorization", `Bearer ${adminToken}`);
+
+            expect(res.status).toBe(200);
+            expect(res.body.data).toHaveLength(2);
+        });
+
+        it("does not mark messages as read", async () => {
+            const { token: adminToken } = await createUserAndToken({ role: "admin" });
+            const { clientToken, client, caseId } = await makeLinkedClientAndCase(adminToken);
+
+            await request(app)
+                .post(`/api/v1/messages?case=${caseId}`)
+                .set("Authorization", `Bearer ${clientToken}`)
+                .send({ content: "Unread check" });
+
+            await request(app)
+                .get(`/api/v1/messages/client/${client._id.toString()}`)
+                .set("Authorization", `Bearer ${adminToken}`);
+
+            const stillUnread = await request(app)
+                .get(`/api/v1/messages/client/${client._id.toString()}`)
+                .set("Authorization", `Bearer ${adminToken}`);
+            expect(stillUnread.body.data[0].readAt).toBeFalsy();
+        });
+
+        it("a client (non-staff) is rejected", async () => {
+            const { token: adminToken } = await createUserAndToken({ role: "admin" });
+            const { clientToken, client } = await makeLinkedClientAndCase(adminToken);
+
+            const res = await request(app)
+                .get(`/api/v1/messages/client/${client._id.toString()}`)
+                .set("Authorization", `Bearer ${clientToken}`);
+            expect(res.status).toBe(403);
+        });
+
+        it("returns an empty list for a client with no cases", async () => {
+            const { token: adminToken } = await createUserAndToken({ role: "admin" });
+            const { user: adminUser } = await createUserAndToken({ role: "admin" });
+            const client = await ClientModel.create({
+                firstName: "No",
+                lastName: "Cases",
+                email: `no-cases-${Date.now()}@lexcore.local`,
+                phone: "1234567890",
+                type: "individual",
+                status: "active",
+                createdBy: adminUser._id,
+            });
+
+            const res = await request(app)
+                .get(`/api/v1/messages/client/${client._id.toString()}`)
+                .set("Authorization", `Bearer ${adminToken}`);
+            expect(res.status).toBe(200);
+            expect(res.body.data).toHaveLength(0);
+        });
+    });
 });

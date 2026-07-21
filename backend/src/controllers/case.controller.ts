@@ -15,8 +15,9 @@ export class CaseController {
             const search = (req.query.search as string) || undefined;
             const status = (req.query.status as string) || undefined;
             const client = (req.query.client as string) || undefined;
+            const assignedAttorney = (req.query.assignedAttorney as string) || undefined;
 
-            const { data, total } = await caseService.getAll({ page, size, search, status, client });
+            const { data, total } = await caseService.getAll({ page, size, search, status, client, assignedAttorney });
 
             return ApiResponseHelper.success(res, data, "Cases fetched successfully", 200, {
                 page,

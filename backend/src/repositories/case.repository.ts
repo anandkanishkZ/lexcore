@@ -8,11 +8,12 @@ export interface CaseQuery {
     search?: string;
     status?: string;
     client?: string;
+    assignedAttorney?: string;
 }
 
 export class CaseMongoRepository {
     async getAll(query: CaseQuery): Promise<{ data: ICase[]; total: number }> {
-        const { page, size, search, status, client } = query;
+        const { page, size, search, status, client, assignedAttorney } = query;
         const skip = (page - 1) * size;
 
         const filter: any = {};
@@ -26,6 +27,7 @@ export class CaseMongoRepository {
         }
         if (status) filter.status = status;
         if (client) filter.client = client;
+        if (assignedAttorney) filter.assignedAttorney = assignedAttorney;
 
         const [data, total] = await Promise.all([
             CaseModel.find(filter)
@@ -75,6 +77,14 @@ export class CaseMongoRepository {
             .populate("assignedAttorney", "firstName lastName email userType")
             .populate("createdBy", "firstName lastName")
             .sort({ createdAt: -1 });
+    }
+
+    /** Bare case ids for one client, for downstream `case: { $in: ... }`
+     * lookups (e.g. all of a client's documents/tasks/messages across every
+     * case they have — those collections scope by case, not client). */
+    async getIdsForClient(clientId: string): Promise<string[]> {
+        const cases = await CaseModel.find({ client: clientId }, "_id");
+        return cases.map((c) => c._id.toString());
     }
 
     /** Keyword search over title + description (AI search feature). */

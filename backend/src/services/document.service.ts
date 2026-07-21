@@ -4,6 +4,7 @@ import { CaseFolderMongoRepository } from "../repositories/case-folder.repositor
 import { CaseFileMongoRepository, FileListFilters } from "../repositories/case-file.repository";
 import { FileShareMongoRepository } from "../repositories/file-share.repository";
 import { FileVersionMongoRepository } from "../repositories/file-version.repository";
+import { CaseMongoRepository } from "../repositories/case.repository";
 import { CaseService } from "./case.service";
 import { HttpException } from "../exceptions/http-exception";
 import { ICaseFolder } from "../models/case-folder.model";
@@ -23,6 +24,7 @@ const folderRepository = new CaseFolderMongoRepository();
 const fileRepository = new CaseFileMongoRepository();
 const fileShareRepository = new FileShareMongoRepository();
 const fileVersionRepository = new FileVersionMongoRepository();
+const caseRepository = new CaseMongoRepository();
 const caseService = new CaseService();
 const userRepository = new UserMongoRepository();
 const notificationService = new NotificationService();
@@ -497,6 +499,15 @@ export class DocumentService {
     }
 
     // --- Cross-case views -----------------------------------------------------
+
+    /** Every document across every case belonging to one client — the
+     * "Documents" tab on a staff-facing client detail page. Staff-only
+     * (enforced at the route), so no ownership check is needed here. */
+    async listForClient(clientId: string): Promise<ICaseFile[]> {
+        const caseIds = await caseRepository.getIdsForClient(clientId);
+        if (caseIds.length === 0) return [];
+        return fileRepository.listRecentForCases(caseIds, 500);
+    }
 
     async listRecent(requestingUser: RequestingUser): Promise<ICaseFile[]> {
         if (requestingUser.role === "admin") {

@@ -1,6 +1,7 @@
 import path from "path";
 import fs from "fs";
 import { MessageMongoRepository } from "../repositories/message.repository";
+import { CaseMongoRepository } from "../repositories/case.repository";
 import { CaseService } from "./case.service";
 import { NotificationService } from "./notification.service";
 import { SendMessageDTO } from "../dtos/message.dto";
@@ -14,6 +15,7 @@ import { classifyAttachment, MESSAGE_ATTACHMENTS_DIR } from "../middlewares/mess
 import { assertUploadIsSafe } from "../utils/malware-scan.util";
 
 const messageRepository = new MessageMongoRepository();
+const caseRepository = new CaseMongoRepository();
 const caseService = new CaseService();
 const notificationService = new NotificationService();
 
@@ -29,6 +31,16 @@ export class MessageService {
         const history = await messageRepository.getHistory(caseId);
         await messageRepository.markReadForCase(caseId, requestingUser.userId);
         return history;
+    }
+
+    /** Every message across a client's cases, for a staff-facing client
+     * detail page — unlike getHistory, this doesn't mark anything as read,
+     * since a staff member browsing a client's history isn't "the other
+     * party" and shouldn't clear the client's own unread state. */
+    async getHistoryForClient(clientId: string): Promise<IMessage[]> {
+        const caseIds = await caseRepository.getIdsForClient(clientId);
+        if (caseIds.length === 0) return [];
+        return messageRepository.getHistoryForCases(caseIds);
     }
 
     /**

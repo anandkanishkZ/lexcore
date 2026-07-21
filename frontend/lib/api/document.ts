@@ -28,6 +28,14 @@ export async function fetchDocumentsApi(token: string, caseId: string, folderId?
     return res.json();
 }
 
+export async function fetchClientDocumentsApi(token: string, clientId: string) {
+    const res = await fetch(`${API_URL}/api/v1/documents/client/${clientId}`, {
+        method: "GET",
+        headers: authHeaders(token),
+    });
+    return res.json();
+}
+
 export async function fetchTrashApi(token: string, caseId: string) {
     const res = await fetch(`${API_URL}/api/v1/documents/trash?case=${caseId}`, {
         method: "GET",

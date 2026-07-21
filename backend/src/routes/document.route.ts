@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { DocumentController } from "../controllers/document.controller";
-import { authorizedMiddleware } from "../middlewares/authorized.middleware";
+import { authorizedMiddleware, staffMiddleware } from "../middlewares/authorized.middleware";
 import { caseFileUpload } from "../middlewares/case-file-upload.middleware";
 import { CaseService } from "../services/case.service";
 import { CaseFolderMongoRepository } from "../repositories/case-folder.repository";
@@ -66,6 +66,7 @@ documentRouter.use(authorizedMiddleware);
 documentRouter.get("/recent", documentController.recent);
 documentRouter.get("/starred", documentController.starred);
 documentRouter.get("/trash", documentController.trash);
+documentRouter.get("/client/:clientId", staffMiddleware, documentController.listForClient);
 documentRouter.get("/folders/all", documentController.moveTargets);
 
 documentRouter.get("/", documentController.list);

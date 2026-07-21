@@ -25,8 +25,8 @@ export interface Member {
     createdAt: string;
 }
 
-function detailHref(m: Member) {
-    return m.source === "contact" ? `/admin/clients/${m._id}` : undefined;
+function detailHref(m: Member): string {
+    return m.source === "contact" ? `/admin/clients/${m._id}` : `/admin/users/${m._id}`;
 }
 
 function formatDate(value: string) {
@@ -127,17 +127,17 @@ export default function UsersTable({ members }: { members: Member[] }) {
                                     className="border-b border-slate-100 hover:bg-slate-50 transition"
                                 >
                                     <td className="py-3 px-4">
-                                        <div className="flex items-center gap-3">
+                                        <Link href={href} className="flex items-center gap-3 group w-fit">
                                             <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
                                                 <span className="text-xs font-medium text-slate-600">
                                                     {m.firstName[0]}
                                                     {m.lastName[0]}
                                                 </span>
                                             </div>
-                                            <p className="font-medium text-slate-900 truncate">
+                                            <p className="font-medium text-slate-900 truncate group-hover:text-brand-gold transition">
                                                 {m.firstName} {m.lastName}
                                             </p>
-                                        </div>
+                                        </Link>
                                     </td>
                                     <td className="py-3 px-4 text-slate-600">{m.email}</td>
                                     <td className="py-3 px-4 text-slate-600">{m.phone || "—"}</td>
@@ -189,7 +189,7 @@ export default function UsersTable({ members }: { members: Member[] }) {
                                         {formatDate(m.createdAt)}
                                     </td>
                                     <td className="py-3 px-4">
-                                        {href ? (
+                                        {m.source === "contact" ? (
                                             <div className="flex items-center justify-end gap-1">
                                                 <Link
                                                     href={href}
@@ -208,6 +208,13 @@ export default function UsersTable({ members }: { members: Member[] }) {
                                             </div>
                                         ) : (
                                             <div className="flex items-center justify-end gap-1">
+                                                <Link
+                                                    href={href}
+                                                    title="View"
+                                                    className="p-1.5 rounded-lg text-slate-400 hover:text-brand-gold hover:bg-slate-100 transition"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                </Link>
                                                 <button
                                                     onClick={() => openEdit(m._id)}
                                                     disabled={loadingEditId === m._id}

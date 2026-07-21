@@ -13,7 +13,8 @@ export class TaskController {
             const status = (req.query.status as string) || undefined;
             const assignee = (req.query.assignee as string) || undefined;
             const caseId = (req.query.case as string) || undefined;
-            const data = await taskService.getAll({ status, assignee, case: caseId });
+            const client = (req.query.client as string) || undefined;
+            const data = await taskService.getAll({ status, assignee, case: caseId, client });
             return ApiResponseHelper.success(res, data, "Tasks fetched successfully", 200);
         } catch (error: any) {
             return handleControllerError(res, error, "TaskController");

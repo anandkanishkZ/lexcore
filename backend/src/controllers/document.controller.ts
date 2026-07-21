@@ -49,6 +49,15 @@ export class DocumentController {
         }
     }
 
+    async listForClient(req: Request, res: Response) {
+        try {
+            const files = await documentService.listForClient(req.params.clientId as string);
+            return ApiResponseHelper.success(res, files, "Client documents fetched successfully", 200);
+        } catch (error: any) {
+            return handleControllerError(res, error, "DocumentController");
+        }
+    }
+
     async starred(req: Request, res: Response) {
         try {
             const data = await documentService.listStarred(requestingUser(req));

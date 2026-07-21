@@ -17,6 +17,16 @@ export class MessageMongoRepository {
             .limit(500);
     }
 
+    /** Every message across a set of cases — used for a client-detail page's
+     * cross-case message feed, not a single chat thread like getHistory. */
+    async getHistoryForCases(caseIds: string[]): Promise<IMessage[]> {
+        return MessageModel.find({ case: { $in: caseIds } })
+            .populate("sender", "firstName lastName")
+            .populate("case", "title caseNumber")
+            .sort({ createdAt: -1 })
+            .limit(500);
+    }
+
     /** Marks every message in the case NOT sent by `readerId` as read — see
      * MessageService.getHistory, called whenever the other party fetches the
      * thread. `readAt` was declared on the schema but nothing ever set it. */

@@ -4,11 +4,11 @@ import { fetchTasksApi, createTaskApi, updateTaskApi, deleteTaskApi } from "../a
 import { getTokenCookie } from "../cookies";
 import { revalidatePath } from "next/cache";
 
-export async function fetchTasksAction(status?: string, assignee?: string, caseId?: string) {
+export async function fetchTasksAction(status?: string, assignee?: string, caseId?: string, client?: string) {
     try {
         const token = await getTokenCookie();
         if (!token) return { success: false, message: "Not authenticated" };
-        return await fetchTasksApi(token, status, assignee, caseId);
+        return await fetchTasksApi(token, status, assignee, caseId, client);
     } catch (error: any) {
         return { success: false, message: error.message || "Failed to fetch tasks" };
     }

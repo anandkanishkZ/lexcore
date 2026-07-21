@@ -1,6 +1,6 @@
 "use server";
 
-import { fetchMessagesApi, sendMessageApi } from "../api/message";
+import { fetchMessagesApi, fetchClientMessagesApi, sendMessageApi } from "../api/message";
 import { getTokenCookie } from "../cookies";
 
 export async function fetchMessagesAction(caseId: string) {
@@ -10,6 +10,16 @@ export async function fetchMessagesAction(caseId: string) {
         return await fetchMessagesApi(token, caseId);
     } catch (error: any) {
         return { success: false, message: error.message || "Failed to fetch messages" };
+    }
+}
+
+export async function fetchClientMessagesAction(clientId: string) {
+    try {
+        const token = await getTokenCookie();
+        if (!token) return { success: false, message: "Not authenticated" };
+        return await fetchClientMessagesApi(token, clientId);
+    } catch (error: any) {
+        return { success: false, message: error.message || "Failed to fetch client messages" };
     }
 }
 

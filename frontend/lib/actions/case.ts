@@ -4,11 +4,18 @@ import { fetchCasesApi, fetchCaseApi, createCaseApi, updateCaseApi, deleteCaseAp
 import { getTokenCookie } from "../cookies";
 import { revalidatePath } from "next/cache";
 
-export async function fetchCasesAction(page = 1, size = 10, search?: string, status?: string) {
+export async function fetchCasesAction(
+    page = 1,
+    size = 10,
+    search?: string,
+    status?: string,
+    client?: string,
+    assignedAttorney?: string
+) {
     try {
         const token = await getTokenCookie();
         if (!token) return { success: false, message: "Not authenticated" };
-        return await fetchCasesApi(token, page, size, search, status);
+        return await fetchCasesApi(token, page, size, search, status, client, assignedAttorney);
     } catch (error: any) {
         return { success: false, message: error.message || "Failed to fetch cases" };
     }

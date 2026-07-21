@@ -6,12 +6,14 @@ export async function fetchCasesApi(
     size: number = 10,
     search?: string,
     status?: string,
-    client?: string
+    client?: string,
+    assignedAttorney?: string
 ) {
     const params = new URLSearchParams({ page: String(page), size: String(size) });
     if (search) params.set("search", search);
     if (status) params.set("status", status);
     if (client) params.set("client", client);
+    if (assignedAttorney) params.set("assignedAttorney", assignedAttorney);
 
     const res = await fetch(`${API_URL}/api/v1/cases?${params}`, {
         method: "GET",
