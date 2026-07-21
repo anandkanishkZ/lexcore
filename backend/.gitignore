@@ -9,3 +9,7 @@ uploads/
 .cache/
 *.traineddata
 backups/
+
+# Firebase Admin SDK service account key (push notifications) — grants full
+# send-as-this-project push access; never commit it, see .env.example.
+firebase-service-account.json

@@ -12,5 +12,7 @@ notificationRouter.use(authorizedMiddleware);
 notificationRouter.get("/", notificationController.getMine);
 notificationRouter.patch("/read-all", notificationController.markAllRead);
 notificationRouter.patch("/:id/read", notificationController.markRead);
+notificationRouter.post("/device-token", notificationController.registerDeviceToken);
+notificationRouter.delete("/device-token", notificationController.unregisterDeviceToken);
 
 export default notificationRouter;

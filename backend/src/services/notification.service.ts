@@ -1,9 +1,12 @@
 import { NotificationMongoRepository } from "../repositories/notification.repository";
+import { DeviceTokenMongoRepository } from "../repositories/device-token.repository";
 import { INotification } from "../models/notification.model";
 import { UserModel } from "../models/user.model";
 import { sendMail } from "../utils/mail.util";
+import { sendPush } from "../utils/push.util";
 
 const notificationRepository = new NotificationMongoRepository();
+const deviceTokenRepository = new DeviceTokenMongoRepository();
 
 export class NotificationService {
     async getMine(userId: string): Promise<INotification[]> {
@@ -22,6 +25,28 @@ export class NotificationService {
         return notificationRepository.markAllRead(userId);
     }
 
+    async registerDeviceToken(userId: string, token: string, platform: "android" | "ios"): Promise<void> {
+        await deviceTokenRepository.register(userId, token, platform);
+    }
+
+    async unregisterDeviceToken(token: string): Promise<void> {
+        await deviceTokenRepository.unregister(token);
+    }
+
+    /** Sends to whatever devices these users have registered, then prunes
+     * any token FCM reports as dead. A no-op (and never throws) when push
+     * isn't configured — see utils/push.util.ts. */
+    private async push(userIds: string[], title: string, message: string, linkedEntity?: { type: string; id: string }): Promise<void> {
+        const tokens = await deviceTokenRepository.getTokensForUsers(userIds);
+        if (tokens.length === 0) return;
+        const staleTokens = await sendPush(tokens, {
+            title,
+            body: message,
+            data: linkedEntity ? { type: linkedEntity.type, id: linkedEntity.id } : undefined,
+        });
+        await deviceTokenRepository.deleteTokens(staleTokens);
+    }
+
     /**
      * In-app notification for every admin ("the firm"), e.g. a new case
      * request landing. Kept to `role: admin` rather than every staff member —
@@ -30,15 +55,17 @@ export class NotificationService {
      */
     async notifyAdmins(title: string, message: string, linkedEntity?: { type: string; id: string }): Promise<void> {
         const admins = await UserModel.find({ role: "admin" }, "_id");
+        const adminIds = admins.map((admin) => admin._id.toString());
         await notificationRepository.createMany(
-            admins.map((admin) => ({
-                user: admin._id,
+            adminIds.map((id) => ({
+                user: id as any,
                 title,
                 message,
                 linkedEntityType: linkedEntity?.type,
                 linkedEntityId: linkedEntity?.id,
             }))
         );
+        await this.push(adminIds, title, message, linkedEntity);
     }
 
     async emailAdmins(subject: string, text: string): Promise<void> {
@@ -61,5 +88,6 @@ export class NotificationService {
                 linkedEntityId: linkedEntity?.id,
             },
         ]);
+        await this.push([userId], title, message, linkedEntity);
     }
 }
