@@ -66,6 +66,14 @@ export class CaseRequestService {
      * its case-number-generation logic.
      */
     async approve(id: string, staffUserId: string, data: ApproveCaseRequestDTO): Promise<ICaseRequest> {
+        // Validated BEFORE anything is claimed/created — this used to run
+        // only inside caseService.create(), after the request was already
+        // claimed "approved" and the Client record already created/linked.
+        // An invalid attorney then left a permanently stuck record: marked
+        // approved, no resultingCase, nothing to retry from in the UI. Now a
+        // bad selection fails clean with the request still pending.
+        if (data.assignedAttorney) await caseService.assertValidAttorney(data.assignedAttorney);
+
         // Atomically claim the request out of "pending" FIRST — a plain
         // read-then-write here let two concurrent approvals (a double-click,
         // or two staff triaging at once) both pass the pending check before
@@ -87,41 +95,57 @@ export class CaseRequestService {
         // subdocument here, not a raw ObjectId — extract its _id rather
         // than .toString()-ing the document.
         const requestedById = (request.requestedBy as unknown as { _id: { toString(): string } })._id.toString();
-        const requester = await userRepository.getUserById(requestedById);
-        if (!requester) throw new HttpException(404, "Requesting user not found");
 
-        let client = await ClientModel.findOne({ email: requester.email });
-        if (!client) {
-            client = await ClientModel.create({
-                firstName: requester.firstName,
-                lastName: requester.lastName,
-                email: requester.email,
-                phone: request.phone,
-                type: "individual",
-                status: "active",
-                createdBy: staffUserId,
-                linkedUserId: requester._id,
-            });
-        } else if (!client.linkedUserId) {
-            // Pre-existing Client record from before linkedUserId existed, or
-            // one an admin created by hand before this requester ever logged
-            // in — link it now rather than leaving requester and contact as
-            // two permanently-unrelated rows in the members directory.
-            client.linkedUserId = requester._id as any;
-            await client.save();
+        // MongoDB here runs standalone (no replica set), so there's no
+        // multi-document transaction to wrap the claim + client-creation +
+        // case-creation in. The attorney check above covers the one routine,
+        // easily-triggered failure; this catch is the backstop for anything
+        // else (a deleted requester, a DB hiccup) — it un-claims the request
+        // back to "pending" so a failure here is retryable instead of
+        // leaving a permanently stuck "approved" record with no case.
+        let createdCase;
+        let client;
+        let requester;
+        try {
+            requester = await userRepository.getUserById(requestedById);
+            if (!requester) throw new HttpException(404, "Requesting user not found");
+
+            client = await ClientModel.findOne({ email: requester.email });
+            if (!client) {
+                client = await ClientModel.create({
+                    firstName: requester.firstName,
+                    lastName: requester.lastName,
+                    email: requester.email,
+                    phone: request.phone,
+                    type: "individual",
+                    status: "active",
+                    createdBy: staffUserId,
+                    linkedUserId: requester._id,
+                });
+            } else if (!client.linkedUserId) {
+                // Pre-existing Client record from before linkedUserId existed, or
+                // one an admin created by hand before this requester ever logged
+                // in — link it now rather than leaving requester and contact as
+                // two permanently-unrelated rows in the members directory.
+                client.linkedUserId = requester._id as any;
+                await client.save();
+            }
+
+            createdCase = await caseService.create(
+                {
+                    title: request.title,
+                    type: request.type,
+                    status: "open",
+                    client: client._id.toString(),
+                    assignedAttorney: data.assignedAttorney,
+                    description: request.description,
+                },
+                staffUserId
+            );
+        } catch (error) {
+            await caseRequestRepository.update(id, { status: "pending", reviewedBy: undefined, reviewNote: undefined });
+            throw error;
         }
-
-        const createdCase = await caseService.create(
-            {
-                title: request.title,
-                type: request.type,
-                status: "open",
-                client: client._id.toString(),
-                assignedAttorney: data.assignedAttorney,
-                description: request.description,
-            },
-            staffUserId
-        );
 
         // The request is already claimed (status/reviewedBy/reviewNote set
         // atomically above) — this second write only attaches the case that

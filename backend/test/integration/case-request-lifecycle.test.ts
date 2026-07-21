@@ -3,6 +3,7 @@ import app from "../../src/app";
 import { createUserAndToken } from "../helpers";
 import { ClientModel } from "../../src/models/client.model";
 import { CaseModel } from "../../src/models/case.model";
+import { CaseRequestModel } from "../../src/models/case-request.model";
 
 describe("case request lifecycle (submit -> approve/reject)", () => {
     it("approves a request: creates a Client + Case and is not a regression of the populated-requestedBy bug", async () => {
@@ -212,6 +213,51 @@ describe("case request lifecycle (submit -> approve/reject)", () => {
         expect(notifications.status).toBe(200);
         const approvalNotice = notifications.body.data.notifications.find((n: any) => n.title === "Case request approved");
         expect(approvalNotice).toBeTruthy();
+    });
+
+    it("approving with an invalid attorney leaves the request pending, retryable, and creates no Case or Client (regression: used to get stuck 'approved' with no resultingCase)", async () => {
+        const { token: clientToken, user: clientUser } = await createUserAndToken({
+            userType: "client",
+            role: "user",
+            email: "bad-attorney-client@lexcore.local",
+        });
+        const { token: adminToken } = await createUserAndToken({ role: "admin" });
+        // A client-type user is never a valid attorney — the exact case that
+        // used to slip through: claimed as "approved", Client created, then
+        // caseService.create() threw 400 too late to undo any of it.
+        const { user: otherClient } = await createUserAndToken({
+            userType: "client",
+            role: "user",
+            email: "not-an-attorney@lexcore.local",
+        });
+
+        const submitted = await request(app)
+            .post("/api/v1/case-requests")
+            .set("Authorization", `Bearer ${clientToken}`)
+            .send({ title: "Bad attorney test", type: "other", description: "desc", phone: "1" });
+        const requestId = submitted.body.data._id;
+
+        const badApprove = await request(app)
+            .post(`/api/v1/case-requests/${requestId}/approve`)
+            .set("Authorization", `Bearer ${adminToken}`)
+            .send({ assignedAttorney: otherClient._id.toString() });
+        expect(badApprove.status).toBe(400);
+
+        const stillPending = await CaseRequestModel.findById(requestId);
+        expect(stillPending!.status).toBe("pending");
+        expect(stillPending!.resultingCase).toBeFalsy();
+        expect(stillPending!.reviewedBy).toBeFalsy();
+
+        expect(await ClientModel.findOne({ email: clientUser.email })).toBeNull();
+        expect(await CaseModel.countDocuments({ title: "Bad attorney test" })).toBe(0);
+
+        // And it's genuinely retryable — a valid approval afterward succeeds.
+        const goodApprove = await request(app)
+            .post(`/api/v1/case-requests/${requestId}/approve`)
+            .set("Authorization", `Bearer ${adminToken}`)
+            .send({});
+        expect(goodApprove.status).toBe(200);
+        expect(goodApprove.body.data.resultingCase).toBeTruthy();
     });
 
     it("rejects a duplicate pending request with the same title", async () => {

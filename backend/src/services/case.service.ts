@@ -27,7 +27,7 @@ export class CaseService {
      * or a direct API call). Shared by create/update so every entry point
      * that can set assignedAttorney enforces this the same way.
      */
-    private async assertValidAttorney(attorneyId: string): Promise<void> {
+    async assertValidAttorney(attorneyId: string): Promise<void> {
         const user = await userRepository.getUserById(attorneyId);
         if (!user) throw new HttpException(404, "Assigned attorney not found");
         if (user.userType === "client") {
