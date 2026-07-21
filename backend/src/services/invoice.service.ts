@@ -262,10 +262,23 @@ export class InvoiceService {
             });
         });
 
-        const paidAmount = await invoiceRepository.sumPayments(invoiceId);
-        const status = paidAmount >= invoice.total ? "paid" : invoice.status;
-
-        const updated = await invoiceRepository.update(invoiceId, { paidAmount, status });
+        // The Payment record above is already committed by this point — it's
+        // the source of truth paidAmount is always recomputed FROM, never
+        // incremented, so retrying this reconciliation step (by re-fetching
+        // the invoice) is always safe and never double-counts. If it still
+        // fails, say so plainly rather than a generic 500 that reads as if
+        // the payment itself never happened.
+        let updated: IInvoice | null;
+        try {
+            const paidAmount = await invoiceRepository.sumPayments(invoiceId);
+            const status = paidAmount >= invoice.total ? "paid" : invoice.status;
+            updated = await invoiceRepository.update(invoiceId, { paidAmount, status });
+        } catch (error) {
+            throw new HttpException(
+                500,
+                "The payment was recorded, but the invoice total couldn't be refreshed. Reload this invoice — the balance will catch up automatically."
+            );
+        }
         if (!updated) throw new HttpException(500, "Failed to update invoice after payment");
 
         await logAudit({
