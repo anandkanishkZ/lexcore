@@ -24,6 +24,13 @@ export const CORS_ORIGINS: string[] = (process.env.CORS_ORIGIN || "http://localh
 // CORS_ORIGIN, which can be a comma-separated allowlist.
 export const FRONTEND_URL: string = process.env.FRONTEND_URL || "http://localhost:3000";
 
+// This API's own public origin — used to build eSewa's success_url/failure_url,
+// which eSewa validates server-side and rejects unless it's a real http(s) URL
+// (a custom scheme like lexcore:// is rejected before the checkout page even
+// renders). The mobile WebView still intercepts navigation to these URLs
+// before they finish loading, same as it did with the old custom scheme.
+export const BACKEND_PUBLIC_URL: string = process.env.BACKEND_PUBLIC_URL || `http://localhost:${PORT}`;
+
 export const SMTP_HOST: string | undefined = process.env.SMTP_HOST || undefined;
 export const SMTP_PORT: number = Number(process.env.SMTP_PORT) || 587;
 export const SMTP_USER: string | undefined = process.env.SMTP_USER || undefined;
@@ -34,3 +41,14 @@ export const SMTP_FROM: string = process.env.SMTP_FROM || "Lexcore <no-reply@lex
 // degrades gracefully (503 "not configured") rather than failing startup
 // when this is unset.
 export const DEEPSEEK_API_KEY: string | undefined = process.env.DEEPSEEK_API_KEY || undefined;
+
+// eSewa "Intent Payment" — a separate integration from the ePay v2 flow
+// (EsewaPaymentService/esewaClientId/esewaSecretEncrypted in FirmSettings).
+// Unlike ePay v2, eSewa issues one fixed product_code + access key per
+// environment tier for Intent (not a per-merchant secret an admin rotates),
+// so this lives in .env rather than the admin-configurable FirmSettings
+// document. Degrades gracefully (503) when unset, same as DEEPSEEK_API_KEY.
+export const ESEWA_INTENT_PRODUCT_CODE: string = process.env.ESEWA_INTENT_PRODUCT_CODE || "INTENT";
+export const ESEWA_INTENT_ACCESS_KEY: string | undefined = process.env.ESEWA_INTENT_ACCESS_KEY || undefined;
+export const ESEWA_INTENT_BASE_URL: string =
+    process.env.ESEWA_INTENT_BASE_URL || "https://rc-checkout.esewa.com.np";

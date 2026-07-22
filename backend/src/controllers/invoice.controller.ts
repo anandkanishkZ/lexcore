@@ -1,13 +1,22 @@
 import { Request, Response } from "express";
-import { CreateInvoiceDTO, UpdateInvoiceDTO, RecordPaymentDTO, VerifyEsewaPaymentDTO } from "../dtos/invoice.dto";
+import {
+    CreateInvoiceDTO,
+    UpdateInvoiceDTO,
+    RecordPaymentDTO,
+    VerifyEsewaPaymentDTO,
+    InitiateEsewaIntentPaymentDTO,
+    EsewaIntentCallbackDTO,
+} from "../dtos/invoice.dto";
 import { InvoiceService } from "../services/invoice.service";
 import { EsewaPaymentService } from "../services/esewa-payment.service";
+import { EsewaIntentPaymentService } from "../services/esewa-intent-payment.service";
 import { IUser } from "../models/user.model";
 import { ApiResponseHelper } from "../utils/apihelper.util";
 import { handleControllerError } from "../utils/error-handler.util";
 
 const invoiceService = new InvoiceService();
 const esewaPaymentService = new EsewaPaymentService();
+const esewaIntentPaymentService = new EsewaIntentPaymentService();
 
 export class InvoiceController {
     async getAll(req: Request, res: Response) {
@@ -164,6 +173,64 @@ export class InvoiceController {
                 { role: user.role, email: user.email, userId: user._id.toString() }
             );
             return ApiResponseHelper.success(res, updated, "Payment verified and recorded successfully", 201);
+        } catch (error: any) {
+            return handleControllerError(res, error, "InvoiceController");
+        }
+    }
+
+    /** Client-facing: books an Intent Payment transaction with eSewa and
+     * returns a deeplink into the eSewa app. Nothing is recorded here — the
+     * booking only becomes a Payment once eSewa's callback (or the status
+     * poll below) reports SUCCESS. */
+    async initiateEsewaIntentPayment(req: Request, res: Response) {
+        try {
+            const parsed = InitiateEsewaIntentPaymentDTO.safeParse(req.body ?? {});
+            if (!parsed.success) {
+                return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
+            }
+            const user = req.user as IUser;
+            const intent = await esewaIntentPaymentService.initiate(
+                req.params.id as string,
+                { role: user.role, email: user.email, userId: user._id.toString() },
+                parsed.data.redirectUrl
+            );
+            return ApiResponseHelper.success(res, intent, "Payment booked successfully", 200);
+        } catch (error: any) {
+            return handleControllerError(res, error, "InvoiceController");
+        }
+    }
+
+    /** Client-facing fallback: polls eSewa's own status-check API when no
+     * callback has landed yet (eSewa's own guidance is to check after ~5
+     * minutes of silence). */
+    async getEsewaIntentStatus(req: Request, res: Response) {
+        try {
+            const user = req.user as IUser;
+            const transactionUuid = req.query.transactionUuid as string;
+            if (!transactionUuid) {
+                return ApiResponseHelper.error(res, "transactionUuid is required", 400);
+            }
+            const result = await esewaIntentPaymentService.getStatus(req.params.id as string, transactionUuid, {
+                role: user.role,
+                email: user.email,
+            });
+            return ApiResponseHelper.success(res, result, "Payment status fetched successfully", 200);
+        } catch (error: any) {
+            return handleControllerError(res, error, "InvoiceController");
+        }
+    }
+
+    /** Unauthenticated — called by eSewa's own servers, not a logged-in
+     * client. Signature-verified inside the service before anything is
+     * trusted (see EsewaIntentPaymentService.handleCallback). */
+    async esewaIntentCallback(req: Request, res: Response) {
+        try {
+            const parsed = EsewaIntentCallbackDTO.safeParse(req.body);
+            if (!parsed.success) {
+                return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
+            }
+            await esewaIntentPaymentService.handleCallback(parsed.data);
+            return ApiResponseHelper.success(res, null, "Callback processed", 200);
         } catch (error: any) {
             return handleControllerError(res, error, "InvoiceController");
         }

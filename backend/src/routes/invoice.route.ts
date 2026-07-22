@@ -23,6 +23,13 @@ invoiceRouter.get("/:id/payments", invoiceController.listPayments);
 invoiceRouter.post("/:id/esewa/initiate", paymentRateLimiter, invoiceController.initiateEsewaPayment);
 invoiceRouter.post("/:id/esewa/verify", paymentRateLimiter, invoiceController.verifyEsewaPayment);
 
+// eSewa "Intent Payment" — a separate flow from ePay v2 above (see
+// EsewaIntentPaymentService). The unauthenticated server-to-server callback
+// eSewa itself calls lives outside this router, in esewa-callback.route.ts,
+// since invoiceRouter requires a Bearer token that eSewa's servers never send.
+invoiceRouter.post("/:id/esewa-intent/initiate", paymentRateLimiter, invoiceController.initiateEsewaIntentPayment);
+invoiceRouter.get("/:id/esewa-intent/status", paymentRateLimiter, invoiceController.getEsewaIntentStatus);
+
 // Browsing/creating/editing/recording payments is any-staff; deleting is
 // admin-only — same tier split as cases.
 invoiceRouter.get("/", staffMiddleware, invoiceController.getAll);
