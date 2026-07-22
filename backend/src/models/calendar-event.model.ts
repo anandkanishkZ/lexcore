@@ -12,6 +12,10 @@ export interface ICalendarEvent extends Document {
     case?: mongoose.Types.ObjectId;
     participants: mongoose.Types.ObjectId[];
     createdBy: mongoose.Types.ObjectId;
+    // Set by the hearing-reminder cron once it's pushed the ~24h-out
+    // reminder for this event, so a daily sweep never double-sends one.
+    // Meaningless for non-hearing types, left false/unset for them.
+    reminderSent: boolean;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -33,6 +37,7 @@ const CalendarEventMongoSchema = new Schema<ICalendarEvent>(
         case: { type: Schema.Types.ObjectId, ref: "Case" },
         participants: [{ type: Schema.Types.ObjectId, ref: "User" }],
         createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+        reminderSent: { type: Boolean, default: false },
     },
     { timestamps: true }
 );

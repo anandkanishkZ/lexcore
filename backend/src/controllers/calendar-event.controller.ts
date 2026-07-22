@@ -20,6 +20,16 @@ export class CalendarEventController {
         }
     }
 
+    async getMine(req: Request, res: Response) {
+        try {
+            const email = (req.user as IUser).email;
+            const data = await calendarEventService.getMine(email);
+            return ApiResponseHelper.success(res, data, "Hearings fetched successfully", 200);
+        } catch (error: any) {
+            return handleControllerError(res, error, "CalendarEventController");
+        }
+    }
+
     async getById(req: Request, res: Response) {
         try {
             const found = await calendarEventService.getById(req.params.id as string);

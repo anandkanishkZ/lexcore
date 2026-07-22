@@ -3,12 +3,23 @@ import { CreateCalendarEventDTO, UpdateCalendarEventDTO } from "../dtos/calendar
 import { ICalendarEvent } from "../models/calendar-event.model";
 import { HttpException } from "../exceptions/http-exception";
 import { logAudit } from "../utils/audit-log.util";
+import { CaseService } from "./case.service";
 
 const calendarEventRepository = new CalendarEventMongoRepository();
+const caseService = new CaseService();
 
 export class CalendarEventService {
     async getAll(query: CalendarEventQuery): Promise<ICalendarEvent[]> {
         return calendarEventRepository.getAll(query);
+    }
+
+    /** Every hearing on a case this client owns — see
+     * CalendarEventMongoRepository.getMineForCases for the type="hearing"
+     * server-side scoping. */
+    async getMine(email: string): Promise<ICalendarEvent[]> {
+        const cases = await caseService.getMine(email);
+        const caseIds = cases.map((c) => c._id.toString());
+        return calendarEventRepository.getMineForCases(caseIds);
     }
 
     async getById(id: string): Promise<ICalendarEvent> {

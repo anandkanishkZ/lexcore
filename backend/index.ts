@@ -9,6 +9,7 @@ import { initChatGateway } from "./src/socket/chat.gateway";
 import { CaseModel } from "./src/models/case.model";
 import { CaseFileModel } from "./src/models/case-file.model";
 import { startBackupScheduler } from "./scripts/backup-scheduler";
+import { startHearingReminderScheduler } from "./src/utils/hearing-reminder.util";
 import { initErrorTracking, captureException } from "./src/utils/error-tracking.util";
 
 initErrorTracking();
@@ -48,6 +49,7 @@ async function start() {
     });
 
     startBackupScheduler();
+    startHearingReminderScheduler();
 
     const shutdown = (signal: string) => {
         console.log(`${signal} received, shutting down gracefully...`);

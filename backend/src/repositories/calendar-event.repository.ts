@@ -27,6 +27,36 @@ export class CalendarEventMongoRepository {
             .limit(500);
     }
 
+    /** Every hearing across a set of cases — the client-facing "my hearings"
+     * feed. Filtered to type: "hearing" server-side so a client's own
+     * internal-only calendar events (meetings, deadlines) never leak through
+     * a case they happen to own. */
+    async getMineForCases(caseIds: string[]): Promise<ICalendarEvent[]> {
+        if (caseIds.length === 0) return [];
+        return CalendarEventModel.find({ case: { $in: caseIds }, type: "hearing" })
+            .populate("case", "title caseNumber")
+            .sort({ date: 1 })
+            .limit(200);
+    }
+
+    /** Hearings whose date falls within [from, to) and haven't had their
+     * reminder sent yet — used by the daily reminder cron sweep. */
+    async findUnremindedHearingsInWindow(from: Date, to: Date): Promise<ICalendarEvent[]> {
+        return CalendarEventModel.find({
+            type: "hearing",
+            date: { $gte: from, $lt: to },
+            reminderSent: { $ne: true },
+        }).populate({
+            path: "case",
+            select: "title caseNumber client",
+            populate: { path: "client", select: "email linkedUserId" },
+        });
+    }
+
+    async markReminderSent(id: string): Promise<void> {
+        await CalendarEventModel.updateOne({ _id: id }, { $set: { reminderSent: true } });
+    }
+
     async getById(id: string): Promise<ICalendarEvent | null> {
         return CalendarEventModel.findById(id)
             .populate("case", "title caseNumber")
