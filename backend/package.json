@@ -8,7 +8,8 @@
     "start": "node dist/index.js",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
     "backup": "npx tsx scripts/backup.ts",
-    "restore": "npx tsx scripts/restore.ts"
+    "restore": "npx tsx scripts/restore.ts",
+    "backfill-image-ocr": "npx tsx scripts/backfill-image-ocr.ts"
   },
   "keywords": [],
   "author": "",

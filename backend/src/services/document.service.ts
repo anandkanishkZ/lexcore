@@ -12,7 +12,7 @@ import { ICaseFile } from "../models/case-file.model";
 import { IFileShare } from "../models/file-share.model";
 import { IFileVersion } from "../models/file-version.model";
 import { CreateFolderDTO } from "../dtos/document.dto";
-import { extractTextSafely, ocrPdfText } from "../utils/text-extraction.util";
+import { extractTextSafely, ocrPdfText, ocrImageText } from "../utils/text-extraction.util";
 import { UserMongoRepository } from "../repositories/user.repository";
 import { NotificationService } from "./notification.service";
 import { sendMail } from "../utils/mail.util";
@@ -37,6 +37,13 @@ const RECENT_LIMIT = 50;
 function generateStorageFilename(originalName: string): string {
     const ext = path.extname(originalName).toLowerCase();
     return `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+}
+
+/** PDFs need their pages rasterized before Tesseract can read them; images
+ * are OCR'd directly. Picks the extractor extractTextSafely's needsOcr
+ * signal implies for this file's mimetype. */
+function ocrTextFor(filePath: string, mimeType: string): Promise<string | undefined> {
+    return mimeType === "application/pdf" ? ocrPdfText(filePath) : ocrImageText(filePath);
 }
 
 export class DocumentService {
@@ -112,11 +119,12 @@ export class DocumentService {
         });
 
         if (extraction.needsOcr) {
-            // Fire-and-forget: OCR runs several seconds per page, far longer
-            // than an upload request should hang (e.g. the mobile app's 20s
-            // timeout) — the response above has already gone out by the time
-            // this resolves. Backfills extractedText in place once done.
-            ocrPdfText(file.path)
+            // Fire-and-forget: OCR runs several seconds per page/image, far
+            // longer than an upload request should hang (e.g. the mobile
+            // app's 20s timeout) — the response above has already gone out
+            // by the time this resolves. Backfills extractedText in place
+            // once done.
+            ocrTextFor(file.path, file.mimetype)
                 .then((text) => (text ? fileRepository.updateExtractedText(created._id.toString(), text) : undefined))
                 .catch((error) => console.error(`[ocr:error] file ${created._id}:`, error));
         }
@@ -240,7 +248,7 @@ export class DocumentService {
         if (!updated) throw new HttpException(500, "Failed to record new version");
 
         if (extraction.needsOcr) {
-            ocrPdfText(file.path)
+            ocrTextFor(file.path, file.mimetype)
                 .then((text) => (text ? fileRepository.updateExtractedText(fileId, text) : undefined))
                 .catch((error) => console.error(`[ocr:error] file ${fileId}:`, error));
         }

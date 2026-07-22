@@ -1,7 +1,7 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { extractTextSafely } from "../../src/utils/text-extraction.util";
+import { extractTextSafely, ocrImageText } from "../../src/utils/text-extraction.util";
 
 const tempFiles: string[] = [];
 
@@ -111,12 +111,32 @@ describe("extractTextSafely", () => {
         expect(result.needsOcr).toBe(false);
     });
 
-    it("never flags non-PDF types for OCR", async () => {
-        const filePath = writeTempFile("not a real image", ".jpg");
+    it("never flags a type with no OCR path at all (e.g. a spreadsheet)", async () => {
+        const filePath = writeTempFile("not a real spreadsheet", ".xlsx");
 
-        const result = await extractTextSafely(filePath, "image/jpeg");
+        const result = await extractTextSafely(filePath, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
         expect(result.text).toBeUndefined();
         expect(result.needsOcr).toBe(false);
+    });
+
+    it.each(["image/jpeg", "image/png", "image/webp"])(
+        "always flags %s for OCR — an image never has an embedded text layer",
+        async (mimeType) => {
+            const filePath = writeTempFile("not a real image", ".jpg");
+
+            const result = await extractTextSafely(filePath, mimeType);
+
+            expect(result.text).toBeUndefined();
+            expect(result.needsOcr).toBe(true);
+        }
+    );
+});
+
+describe("ocrImageText", () => {
+    it("returns undefined for a file that isn't a real image, without throwing", async () => {
+        const filePath = writeTempFile("not a real image", ".jpg");
+
+        await expect(ocrImageText(filePath)).resolves.toBeUndefined();
     });
 });
