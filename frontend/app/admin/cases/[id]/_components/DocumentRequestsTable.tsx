@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Plus, X, FileCheck2, Clock, Ban } from "lucide-react";
@@ -109,9 +110,13 @@ export default function DocumentRequestsTable({
                                                     {r.title}
                                                 </p>
                                                 {r.status === "fulfilled" && r.fulfilledFile && (
-                                                    <p className="text-xs text-emerald-600 mt-0.5 truncate">
+                                                    <Link
+                                                        href={`/api/documents/${r.fulfilledFile._id}/download`}
+                                                        target="_blank"
+                                                        className="text-xs text-emerald-600 mt-0.5 truncate hover:underline inline-block"
+                                                    >
                                                         {r.fulfilledFile.name}
-                                                    </p>
+                                                    </Link>
                                                 )}
                                             </td>
                                             <td className="px-5 py-3.5 text-slate-500 hidden md:table-cell">
