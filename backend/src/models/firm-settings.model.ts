@@ -22,6 +22,13 @@ export interface IFirmSettings extends Document {
     esewaEnvironment: "test" | "live";
     esewaClientId: string;
     esewaSecretEncrypted: string;
+    // Khalti "Web Checkout (KPG-2)" — a separate gateway from eSewa, same
+    // admin-configurable-without-redeploy rationale. Khalti has a single
+    // secret key (no separate client id) passed as the Authorization header
+    // on every server-side call — see KhaltiPaymentService.
+    khaltiEnabled: boolean;
+    khaltiEnvironment: "test" | "live";
+    khaltiSecretKeyEncrypted: string;
     updatedAt: Date;
 }
 
@@ -39,6 +46,9 @@ const FirmSettingsMongoSchema = new Schema<IFirmSettings>(
         esewaEnvironment: { type: String, enum: ["test", "live"], default: "test" },
         esewaClientId: { type: String, default: "" },
         esewaSecretEncrypted: { type: String, default: "" },
+        khaltiEnabled: { type: Boolean, default: false },
+        khaltiEnvironment: { type: String, enum: ["test", "live"], default: "test" },
+        khaltiSecretKeyEncrypted: { type: String, default: "" },
     },
     { timestamps: { createdAt: false, updatedAt: true } }
 );

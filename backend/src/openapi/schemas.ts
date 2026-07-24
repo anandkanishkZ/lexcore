@@ -138,7 +138,7 @@ export const PaymentResponseSchema = registry.register(
         _id: z.string(),
         invoice: z.string(),
         amount: z.number(),
-        method: z.enum(["cash", "bank_transfer", "card", "cheque", "esewa", "other"]),
+        method: z.enum(["cash", "bank_transfer", "card", "cheque", "esewa", "khalti", "other"]),
         receiptNumber: z.string(),
         gatewayRef: z.string().optional(),
         date: z.string().datetime(),

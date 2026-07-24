@@ -27,6 +27,9 @@ export async function updateFirmSettingsAction(data: {
     esewaEnvironment?: "test" | "live";
     esewaClientId?: string;
     esewaSecret?: string;
+    khaltiEnabled?: boolean;
+    khaltiEnvironment?: "test" | "live";
+    khaltiSecretKey?: string;
 }) {
     try {
         const token = await getTokenCookie();

@@ -10,13 +10,19 @@ import { TextField, SelectField } from "../../_components/FormField";
 interface FirmSettingsFormProps {
     defaultValues: FirmSettingsFormData;
     esewaSecretConfigured: boolean;
+    khaltiSecretKeyConfigured: boolean;
 }
 
-export default function FirmSettingsForm({ defaultValues, esewaSecretConfigured }: FirmSettingsFormProps) {
+export default function FirmSettingsForm({
+    defaultValues,
+    esewaSecretConfigured,
+    khaltiSecretKeyConfigured,
+}: FirmSettingsFormProps) {
     const [isPending, startTransition] = useTransition();
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
     const [secretConfigured, setSecretConfigured] = useState(esewaSecretConfigured);
+    const [khaltiConfigured, setKhaltiConfigured] = useState(khaltiSecretKeyConfigured);
 
     const {
         register,
@@ -29,6 +35,7 @@ export default function FirmSettingsForm({ defaultValues, esewaSecretConfigured 
     });
 
     const esewaEnabled = watch("esewaEnabled");
+    const khaltiEnabled = watch("khaltiEnabled");
 
     // The "saved" banner should only ever describe the form's current
     // values, not a stale save from before the user changed something —
@@ -52,6 +59,7 @@ export default function FirmSettingsForm({ defaultValues, esewaSecretConfigured 
             if (result.success) {
                 setSuccess(true);
                 if (data.esewaSecret) setSecretConfigured(true);
+                if (data.khaltiSecretKey) setKhaltiConfigured(true);
             } else {
                 setError(result.message || "Failed to update firm settings");
             }
@@ -128,6 +136,41 @@ export default function FirmSettingsForm({ defaultValues, esewaSecretConfigured 
                         placeholder={secretConfigured ? "Leave blank to keep the saved secret" : "Enter the eSewa secret key"}
                         autoComplete="new-password"
                         {...register("esewaSecret")}
+                    />
+                </div>
+            </div>
+
+            <div className="pt-4 mt-2 border-t border-slate-200">
+                <div className="flex items-center justify-between mb-1">
+                    <h2 className="text-sm font-semibold text-slate-900">Payment Gateway — Khalti</h2>
+                    <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+                        <input type="checkbox" {...register("khaltiEnabled")} className="h-4 w-4 rounded border-slate-300 text-brand-gold focus:ring-brand-gold/20" />
+                        Enabled
+                    </label>
+                </div>
+                <p className="text-xs text-slate-500 mb-4">
+                    Lets clients pay an invoice from the mobile app via Khalti. Disabled until a secret key is saved here.
+                </p>
+
+                <div className={`space-y-4 ${khaltiEnabled ? "" : "opacity-50"}`}>
+                    <SelectField label="Environment" disabled={!khaltiEnabled} {...register("khaltiEnvironment")}>
+                        <option value="test">Test</option>
+                        <option value="live">Live</option>
+                    </SelectField>
+                    <TextField
+                        label={
+                            <>
+                                Secret Key{" "}
+                                {khaltiConfigured && (
+                                    <span className="ml-1 text-xs font-normal text-emerald-600">— a secret is already saved</span>
+                                )}
+                            </>
+                        }
+                        type="password"
+                        disabled={!khaltiEnabled}
+                        placeholder={khaltiConfigured ? "Leave blank to keep the saved secret" : "Enter the Khalti secret key"}
+                        autoComplete="new-password"
+                        {...register("khaltiSecretKey")}
                     />
                 </div>
             </div>

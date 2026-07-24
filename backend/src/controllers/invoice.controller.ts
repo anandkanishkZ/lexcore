@@ -6,10 +6,12 @@ import {
     VerifyEsewaPaymentDTO,
     InitiateEsewaIntentPaymentDTO,
     EsewaIntentCallbackDTO,
+    VerifyKhaltiPaymentDTO,
 } from "../dtos/invoice.dto";
 import { InvoiceService } from "../services/invoice.service";
 import { EsewaPaymentService } from "../services/esewa-payment.service";
 import { EsewaIntentPaymentService } from "../services/esewa-intent-payment.service";
+import { KhaltiPaymentService } from "../services/khalti-payment.service";
 import { IUser } from "../models/user.model";
 import { ApiResponseHelper } from "../utils/apihelper.util";
 import { handleControllerError } from "../utils/error-handler.util";
@@ -17,6 +19,7 @@ import { handleControllerError } from "../utils/error-handler.util";
 const invoiceService = new InvoiceService();
 const esewaPaymentService = new EsewaPaymentService();
 const esewaIntentPaymentService = new EsewaIntentPaymentService();
+const khaltiPaymentService = new KhaltiPaymentService();
 
 export class InvoiceController {
     async getAll(req: Request, res: Response) {
@@ -231,6 +234,45 @@ export class InvoiceController {
             }
             await esewaIntentPaymentService.handleCallback(parsed.data);
             return ApiResponseHelper.success(res, null, "Callback processed", 200);
+        } catch (error: any) {
+            return handleControllerError(res, error, "InvoiceController");
+        }
+    }
+
+    /** Client-facing: asks the backend for a Khalti checkout redirect URL
+     * for this invoice's outstanding balance. Nothing is recorded here —
+     * the client navigates to paymentUrl (e.g. a WebView), then calls
+     * verifyKhaltiPayment once Khalti's callback reports a pidx. */
+    async initiateKhaltiPayment(req: Request, res: Response) {
+        try {
+            const user = req.user as IUser;
+            const intent = await khaltiPaymentService.initiate(req.params.id as string, {
+                role: user.role,
+                email: user.email,
+                userId: user._id.toString(),
+            });
+            return ApiResponseHelper.success(res, intent, "Payment initiated successfully", 200);
+        } catch (error: any) {
+            return handleControllerError(res, error, "InvoiceController");
+        }
+    }
+
+    /** Client-facing: called after Khalti's checkout redirects back with a
+     * pidx. Never trusts that report alone — re-verifies against Khalti's
+     * own lookup API before recording anything. */
+    async verifyKhaltiPayment(req: Request, res: Response) {
+        try {
+            const parsed = VerifyKhaltiPaymentDTO.safeParse(req.body);
+            if (!parsed.success) {
+                return ApiResponseHelper.error(res, parsed.error.errors.map((e) => e.message).join(", "), 400);
+            }
+            const user = req.user as IUser;
+            const updated = await khaltiPaymentService.verifyAndRecord(req.params.id as string, parsed.data.pidx, {
+                role: user.role,
+                email: user.email,
+                userId: user._id.toString(),
+            });
+            return ApiResponseHelper.success(res, updated, "Payment verified and recorded successfully", 201);
         } catch (error: any) {
             return handleControllerError(res, error, "InvoiceController");
         }

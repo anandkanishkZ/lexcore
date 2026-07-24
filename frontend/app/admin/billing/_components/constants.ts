@@ -27,6 +27,8 @@ export const paymentMethodLabel: Record<string, string> = {
     bank_transfer: "Bank Transfer",
     card: "Card",
     cheque: "Cheque",
+    esewa: "eSewa",
+    khalti: "Khalti",
     other: "Other",
 };
 

@@ -23,6 +23,9 @@ export async function updateFirmSettingsApi(
         esewaEnvironment?: "test" | "live";
         esewaClientId?: string;
         esewaSecret?: string;
+        khaltiEnabled?: boolean;
+        khaltiEnvironment?: "test" | "live";
+        khaltiSecretKey?: string;
     }
 ) {
     const res = await fetch(`${API_URL}/api/v1/settings/firm`, {

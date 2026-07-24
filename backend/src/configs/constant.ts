@@ -52,3 +52,10 @@ export const ESEWA_INTENT_PRODUCT_CODE: string = process.env.ESEWA_INTENT_PRODUC
 export const ESEWA_INTENT_ACCESS_KEY: string | undefined = process.env.ESEWA_INTENT_ACCESS_KEY || undefined;
 export const ESEWA_INTENT_BASE_URL: string =
     process.env.ESEWA_INTENT_BASE_URL || "https://rc-checkout.esewa.com.np";
+
+// Khalti "Web Checkout (KPG-2)" — the secret key itself is admin-configurable
+// (see FirmSettings.khaltiSecretKeyEncrypted), but the API base differs by
+// environment and isn't something an admin needs to type in, so it lives
+// here the same way ESEWA_INTENT_BASE_URL does.
+export const KHALTI_TEST_BASE_URL: string = process.env.KHALTI_TEST_BASE_URL || "https://dev.khalti.com/api/v2";
+export const KHALTI_LIVE_BASE_URL: string = process.env.KHALTI_LIVE_BASE_URL || "https://khalti.com/api/v2";

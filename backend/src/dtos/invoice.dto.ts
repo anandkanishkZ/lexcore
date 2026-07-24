@@ -40,3 +40,12 @@ export const EsewaIntentCallbackDTO = z.object({
     signed_field_names: z.string(),
 });
 export type EsewaIntentCallbackDTO = z.infer<typeof EsewaIntentCallbackDTO>;
+
+// Khalti reports the outcome via GET query params on return_url — the client
+// forwards them here as-is; KhaltiPaymentService always re-verifies against
+// the lookup API rather than trusting this alone (same discipline as eSewa's
+// verifyAndRecord).
+export const VerifyKhaltiPaymentDTO = z.object({
+    pidx: z.string().min(1, "pidx is required"),
+});
+export type VerifyKhaltiPaymentDTO = z.infer<typeof VerifyKhaltiPaymentDTO>;

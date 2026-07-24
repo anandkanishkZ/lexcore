@@ -15,6 +15,9 @@ export const firmSettingsSchema = z.object({
     // Left blank on submit to keep whatever secret is already saved — see
     // FirmSettingsForm's helper text and the backend's matching behavior.
     esewaSecret: z.string().optional(),
+    khaltiEnabled: z.boolean().optional(),
+    khaltiEnvironment: z.enum(["test", "live"]).optional(),
+    khaltiSecretKey: z.string().optional(),
 });
 
 export type FirmSettingsFormData = z.infer<typeof firmSettingsSchema>;
