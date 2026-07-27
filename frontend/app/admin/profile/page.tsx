@@ -1,9 +1,15 @@
-import { handleUserDetails } from "@/lib/actions/auth";
 import { redirect } from "next/navigation";
-import UpdateForm from "../_components/UpdateForm";
-import Link from "next/link";
+import { AlertCircle } from "lucide-react";
+import { handleUserDetails } from "@/lib/actions/auth";
+import ProfileWorkspace from "./_components/ProfileWorkspace";
+import type { ProfileUser } from "./_components/types";
 
-export default async function ProfilePage() {
+interface PageProps {
+    searchParams: Promise<{ tab?: string }>;
+}
+
+export default async function ProfilePage({ searchParams }: PageProps) {
+    const { tab } = await searchParams;
     const result = await handleUserDetails();
 
     if (!result.success && result.message === "Not authenticated") {
@@ -13,38 +19,31 @@ export default async function ProfilePage() {
     if (!result.success || !result.data) {
         return (
             <div className="max-w-2xl">
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-                    <p className="text-sm text-red-600">
-                        {result.message || "Couldn't load your profile. Please try again."}
-                    </p>
+                <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-6">
+                    <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
+                    <div>
+                        <h2 className="text-sm font-semibold text-red-700">Couldn&apos;t load your profile</h2>
+                        <p className="mt-1 text-sm text-red-600">
+                            {result.message || "Something went wrong. Please refresh and try again."}
+                        </p>
+                    </div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="max-w-2xl">
+        <div className="mx-auto max-w-5xl">
             <div className="mb-6">
-                <h1 className="text-2xl font-semibold text-slate-900">
-                    Profile Settings
-                </h1>
-                <p className="mt-1 text-sm text-slate-500">
-                    Update your personal information and profile photo.
+                <p className="text-sm text-slate-500">
+                    Manage the details other people at your firm see, and keep your sign-in secure.
                 </p>
             </div>
 
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-                <UpdateForm user={result.data} />
-            </div>
-
-            <div className="mt-4">
-                <Link
-                    href="/admin/profile/password"
-                    className="text-sm font-medium text-brand-gold hover:underline"
-                >
-                    Change password
-                </Link>
-            </div>
+            <ProfileWorkspace
+                user={result.data as ProfileUser}
+                initialTab={tab === "security" ? "security" : "personal"}
+            />
         </div>
     );
 }

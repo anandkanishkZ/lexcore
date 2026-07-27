@@ -86,7 +86,6 @@ export function getPageTitle(pathname: string): string {
     if (pathname === "/admin/reports") return "Reports";
     if (pathname === "/admin/settings") return "Firm Settings";
     if (pathname === "/admin/audit-log") return "Audit Log";
-    if (pathname === "/admin/profile") return "Profile Settings";
-    if (pathname === "/admin/profile/password") return "Change Password";
+    if (pathname === "/admin/profile") return "My Profile";
     return "Admin Panel";
 }
