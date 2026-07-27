@@ -153,7 +153,7 @@ describe("eSewa payment: initiate", () => {
         expect(fields.signature.length).toBeGreaterThan(0);
         // The secret itself never appears anywhere in the response.
         expect(JSON.stringify(res.body.data)).not.toContain("test-secret-key");
-        expect(fields.success_url).toContain("lexcore://esewa-callback");
+        expect(fields.success_url).toContain("/api/v1/esewa/callback/success");
         expect(fields.success_url).toContain(encodeURIComponent(fields.transaction_uuid));
     });
 
