@@ -23,6 +23,7 @@ export default async function SettingsPage() {
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
                 <FirmSettingsForm
                     esewaSecretConfigured={settings.esewaSecretConfigured ?? false}
+                    khaltiSecretKeyConfigured={settings.khaltiSecretKeyConfigured ?? false}
                     defaultValues={{
                         name: settings.name ?? "Lexcore",
                         logoUrl: settings.logoUrl ?? "",
@@ -36,6 +37,9 @@ export default async function SettingsPage() {
                         esewaEnvironment: settings.esewaEnvironment ?? "test",
                         esewaClientId: settings.esewaClientId ?? "",
                         esewaSecret: "",
+                        khaltiEnabled: settings.khaltiEnabled ?? false,
+                        khaltiEnvironment: settings.khaltiEnvironment ?? "test",
+                        khaltiSecretKey: "",
                     }}
                 />
             </div>

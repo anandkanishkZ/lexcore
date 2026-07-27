@@ -4,7 +4,7 @@ export interface IPayment extends Document {
     _id: mongoose.Types.ObjectId;
     invoice: mongoose.Types.ObjectId;
     amount: number;
-    method: "cash" | "bank_transfer" | "card" | "cheque" | "esewa" | "other";
+    method: "cash" | "bank_transfer" | "card" | "cheque" | "esewa" | "khalti" | "other";
     date: Date;
     receiptNumber: string;
     notes: string;
@@ -23,7 +23,7 @@ const PaymentMongoSchema = new Schema<IPayment>(
         amount: { type: Number, required: true, min: 0.01 },
         method: {
             type: String,
-            enum: ["cash", "bank_transfer", "card", "cheque", "esewa", "other"],
+            enum: ["cash", "bank_transfer", "card", "cheque", "esewa", "khalti", "other"],
             default: "cash",
         },
         date: { type: Date, default: Date.now },

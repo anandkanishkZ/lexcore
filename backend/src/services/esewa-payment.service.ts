@@ -5,6 +5,7 @@ import { decryptSecret } from "../utils/crypto.util";
 import { HttpException } from "../exceptions/http-exception";
 import { PaymentModel } from "../models/payment.model";
 import { IInvoice } from "../models/invoice.model";
+import { BACKEND_PUBLIC_URL } from "../configs/constant";
 
 const firmSettingsRepository = new FirmSettingsMongoRepository();
 const invoiceService = new InvoiceService();
@@ -113,12 +114,15 @@ export class EsewaPaymentService {
                 ? "https://epay.esewa.com.np/api/epay/main/v2/form"
                 : "https://rc-epay.esewa.com.np/api/epay/main/v2/form";
 
-        // A custom URL scheme, not a real hosted page — the mobile client
-        // intercepts navigation to it inside the WebView (it will never
-        // actually resolve) purely to learn the outcome + transaction_uuid,
-        // then always calls verifyAndRecord() rather than trusting this URL.
+        // Must be a real http(s) URL — eSewa validates success_url/failure_url
+        // server-side and rejects a custom scheme (e.g. lexcore://) before the
+        // checkout page even renders. The mobile client's WebView still
+        // intercepts navigation to this URL before it finishes loading, purely
+        // to learn the outcome + transaction_uuid — it never actually needs to
+        // render; verifyAndRecord() is always called regardless of what this
+        // page says.
         const callback = (outcome: "success" | "failure") =>
-            `lexcore://esewa-callback?outcome=${outcome}&transactionUuid=${encodeURIComponent(transactionUuid)}`;
+            `${BACKEND_PUBLIC_URL}/api/v1/esewa/callback/${outcome}?transactionUuid=${encodeURIComponent(transactionUuid)}`;
 
         return {
             formUrl,

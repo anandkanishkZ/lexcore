@@ -23,6 +23,20 @@ invoiceRouter.get("/:id/payments", invoiceController.listPayments);
 invoiceRouter.post("/:id/esewa/initiate", paymentRateLimiter, invoiceController.initiateEsewaPayment);
 invoiceRouter.post("/:id/esewa/verify", paymentRateLimiter, invoiceController.verifyEsewaPayment);
 
+// eSewa "Intent Payment" — a separate flow from ePay v2 above (see
+// EsewaIntentPaymentService). The unauthenticated server-to-server callback
+// eSewa itself calls lives outside this router, in esewa-callback.route.ts,
+// since invoiceRouter requires a Bearer token that eSewa's servers never send.
+invoiceRouter.post("/:id/esewa-intent/initiate", paymentRateLimiter, invoiceController.initiateEsewaIntentPayment);
+invoiceRouter.get("/:id/esewa-intent/status", paymentRateLimiter, invoiceController.getEsewaIntentStatus);
+
+// Khalti "Web Checkout" — same shape as ePay v2 above (initiate then
+// verify), just a plain redirect instead of a signed form POST. The
+// unauthenticated GET landing page Khalti's own return_url points at lives
+// outside this router, in khalti-callback.route.ts.
+invoiceRouter.post("/:id/khalti/initiate", paymentRateLimiter, invoiceController.initiateKhaltiPayment);
+invoiceRouter.post("/:id/khalti/verify", paymentRateLimiter, invoiceController.verifyKhaltiPayment);
+
 // Browsing/creating/editing/recording payments is any-staff; deleting is
 // admin-only — same tier split as cases.
 invoiceRouter.get("/", staffMiddleware, invoiceController.getAll);

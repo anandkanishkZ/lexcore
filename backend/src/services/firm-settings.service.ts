@@ -7,10 +7,12 @@ import { HttpException } from "../exceptions/http-exception";
 const firmSettingsRepository = new FirmSettingsMongoRepository();
 
 /** Firm settings as any client (browser or mobile) may see them — the
- * encrypted eSewa secret itself is never serialized, only whether one has
- * been saved, so the admin UI can show "configured" without exposing it. */
-export type PublicFirmSettings = Omit<IFirmSettings, "esewaSecretEncrypted"> & {
+ * encrypted eSewa/Khalti secrets themselves are never serialized, only
+ * whether one has been saved, so the admin UI can show "configured" without
+ * exposing them. */
+export type PublicFirmSettings = Omit<IFirmSettings, "esewaSecretEncrypted" | "khaltiSecretKeyEncrypted"> & {
     esewaSecretConfigured: boolean;
+    khaltiSecretKeyConfigured: boolean;
 };
 
 /** What any client needs to decide whether to show a "Pay with eSewa"
@@ -23,10 +25,21 @@ export interface EsewaPublicConfig {
     environment: "test" | "live";
 }
 
+/** Same rationale as EsewaPublicConfig — Khalti's secret key never reaches
+ * the client either; see KhaltiPaymentService.initiate. */
+export interface KhaltiPublicConfig {
+    enabled: boolean;
+    environment: "test" | "live";
+}
+
 function toPublic(settings: IFirmSettings): PublicFirmSettings {
     const obj = settings.toObject ? settings.toObject() : settings;
-    const { esewaSecretEncrypted, ...rest } = obj;
-    return { ...rest, esewaSecretConfigured: Boolean(esewaSecretEncrypted) };
+    const { esewaSecretEncrypted, khaltiSecretKeyEncrypted, ...rest } = obj;
+    return {
+        ...rest,
+        esewaSecretConfigured: Boolean(esewaSecretEncrypted),
+        khaltiSecretKeyConfigured: Boolean(khaltiSecretKeyEncrypted),
+    };
 }
 
 export class FirmSettingsService {
@@ -36,12 +49,12 @@ export class FirmSettingsService {
     }
 
     async update(data: UpdateFirmSettingsDTO): Promise<PublicFirmSettings> {
-        const { esewaSecret, ...rest } = data;
+        const { esewaSecret, khaltiSecretKey, ...rest } = data;
         const payload: Partial<IFirmSettings> = { ...rest };
-        // Only touch the stored secret when a real replacement value is
-        // sent — an empty/omitted field means "keep what's already saved",
-        // not "clear it".
-        if (esewaSecret) {
+        // Only touch a stored secret when a real replacement value is sent —
+        // an empty/omitted field means "keep what's already saved", not
+        // "clear it". Same rule for both gateways' secrets.
+        if (esewaSecret || khaltiSecretKey) {
             // encryptSecret throws a plain Error (no .status) when
             // ENCRYPTION_KEY is unset, which handleControllerError would
             // otherwise flatten into an unhelpful generic 500 — checking
@@ -54,7 +67,8 @@ export class FirmSettingsService {
                     "Online payment cannot be configured yet — ENCRYPTION_KEY is not set on the server. Contact your system administrator."
                 );
             }
-            payload.esewaSecretEncrypted = encryptSecret(esewaSecret);
+            if (esewaSecret) payload.esewaSecretEncrypted = encryptSecret(esewaSecret);
+            if (khaltiSecretKey) payload.khaltiSecretKeyEncrypted = encryptSecret(khaltiSecretKey);
         }
         const updated = await firmSettingsRepository.update(payload);
         return toPublic(updated);
@@ -84,5 +98,17 @@ export class FirmSettingsService {
             throw new HttpException(503, "Online payment is temporarily unavailable — contact the firm");
         }
         return { enabled: true, environment: settings.esewaEnvironment };
+    }
+
+    /** Same purpose as getEsewaPublicConfig, for Khalti. */
+    async getKhaltiPublicConfig(): Promise<KhaltiPublicConfig> {
+        const settings = await firmSettingsRepository.get();
+        if (!settings.khaltiEnabled) {
+            return { enabled: false, environment: settings.khaltiEnvironment };
+        }
+        if (settings.khaltiSecretKeyEncrypted && !process.env.ENCRYPTION_KEY) {
+            throw new HttpException(503, "Online payment is temporarily unavailable — contact the firm");
+        }
+        return { enabled: true, environment: settings.khaltiEnvironment };
     }
 }

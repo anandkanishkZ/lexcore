@@ -16,6 +16,7 @@ settingsRouter.put("/firm", adminMiddleware, firmSettingsController.update);
 // screen needs to know whether eSewa is on before it can launch the SDK, and
 // clients are never staff. Returns no secret, so no elevated gate needed.
 settingsRouter.get("/payment/esewa-config", firmSettingsController.getEsewaConfig);
+settingsRouter.get("/payment/khalti-config", firmSettingsController.getKhaltiConfig);
 
 // Any authenticated user — non-sensitive (name, currency), needed by the
 // mobile app to format amounts using the firm's actual configured currency

@@ -23,6 +23,9 @@ import documentRequestRouter from "./routes/document-request.route";
 import messageRouter from "./routes/message.route";
 import aiRouter from "./routes/ai.route";
 import reportRouter from "./routes/report.route";
+import esewaCallbackRouter from "./routes/esewa-callback.route";
+import esewaIntentCallbackRouter from "./routes/esewa-intent-callback.route";
+import khaltiCallbackRouter from "./routes/khalti-callback.route";
 import { HttpException } from "./exceptions/http-exception";
 import { ApiResponseHelper } from "./utils/apihelper.util";
 import { captureException } from "./utils/error-tracking.util";
@@ -73,6 +76,9 @@ app.use("/api/v1/document-requests", documentRequestRouter);
 app.use("/api/v1/messages", messageRouter);
 app.use("/api/v1/ai", aiRouter);
 app.use("/api/v1/reports", reportRouter);
+app.use("/api/v1/esewa/callback", esewaCallbackRouter);
+app.use("/api/v1/esewa/intent/callback", esewaIntentCallbackRouter);
+app.use("/api/v1/khalti/callback", khaltiCallbackRouter);
 
 app.use((req: Request, res: Response) => {
     ApiResponseHelper.error(res, "API not found", 404);

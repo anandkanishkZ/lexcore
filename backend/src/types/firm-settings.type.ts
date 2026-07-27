@@ -17,6 +17,12 @@ export const FirmSettingsSchema = z.object({
     // send an empty string) to leave the previously saved secret untouched,
     // so the admin isn't forced to re-enter it on every unrelated settings save.
     esewaSecret: z.string().optional(),
+    khaltiEnabled: z.boolean().optional(),
+    khaltiEnvironment: z.enum(["test", "live"]).optional(),
+    // Same write-only, encrypt-on-save pattern as esewaSecret — Khalti's
+    // secret key is the sole credential (passed as the Authorization header
+    // on every server-side API call), there's no separate public client id.
+    khaltiSecretKey: z.string().optional(),
 });
 
 export type FirmSettingsType = z.infer<typeof FirmSettingsSchema>;

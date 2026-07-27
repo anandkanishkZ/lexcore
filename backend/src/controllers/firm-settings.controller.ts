@@ -59,4 +59,14 @@ export class FirmSettingsController {
             return handleControllerError(res, error, "FirmSettingsController");
         }
     }
+
+    /** Same purpose as getEsewaConfig, for the "Pay with Khalti" button. */
+    async getKhaltiConfig(req: Request, res: Response) {
+        try {
+            const config = await firmSettingsService.getKhaltiPublicConfig();
+            return ApiResponseHelper.success(res, config, "Payment config fetched successfully", 200);
+        } catch (error: any) {
+            return handleControllerError(res, error, "FirmSettingsController");
+        }
+    }
 }
